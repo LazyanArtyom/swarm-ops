@@ -1,16 +1,23 @@
 # SwarmOps
 
-Cross-platform Qt/CMake desktop client for the SwarmOps drone swarm platform, with:
-- CMake presets
-- Conan dependency management
-- Qt Test integration
-- clang-tidy tasks
-- cross-platform packaging hooks for Linux, Windows, and macOS
+SwarmOps is a cross-platform Qt/C++ desktop application for planning, monitoring,
+and controlling drone swarm operations. It is designed as a professional mission
+workspace where operators can build swarm missions, visualize live telemetry,
+manage mission state, and coordinate decentralized flight control from a focused
+desktop interface.
 
-The client is the GUI entry point described in the SwarmOps architecture: it will
-communicate with the platform through the public API Gateway contract, while
-backend services own SwarmKit integration, telemetry ingestion, mission
-workspace persistence, and collaboration.
+This repository contains the SwarmOps GUI client. It provides the application
+shell, workspace foundation, settings, logging, theme system, tests, and
+packaging flow that future mission-planning, telemetry, and flight-control tools
+will build on.
+
+Built with:
+- Qt 6 and modern C++23
+- CMake presets for Linux, Windows, and macOS
+- Conan dependency management
+- Qt Test coverage
+- clang-tidy tooling
+- cross-platform packaging hooks
 
 ## Requirements
 
