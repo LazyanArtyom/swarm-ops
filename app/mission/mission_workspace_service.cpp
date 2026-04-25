@@ -39,6 +39,8 @@ void MissionWorkspaceService::CreateWorkspaceFromMapCapture(const WorkspaceBackg
     }
 
     (void)gateway_->CreateWorkspace(background);
+    undo_stack_.clear();
+    redo_stack_.clear();
     RequestGraphEditor();
 }
 
@@ -113,6 +115,28 @@ void MissionWorkspaceService::RemoveEdge(const QString& edge_id) {
     Commit(workspace);
 }
 
+void MissionWorkspaceService::SetNodeType(const QString& node_id, GraphNodeType type) {
+    MissionWorkspace workspace = ActiveWorkspace();
+    for (GraphNode& node : workspace.nodes) {
+        if (node.id == node_id) {
+            node.type = type;
+            Commit(workspace);
+            return;
+        }
+    }
+}
+
+void MissionWorkspaceService::SetNodeCategory(const QString& node_id, GraphNodeCategory category) {
+    MissionWorkspace workspace = ActiveWorkspace();
+    for (GraphNode& node : workspace.nodes) {
+        if (node.id == node_id) {
+            node.category = category;
+            Commit(workspace);
+            return;
+        }
+    }
+}
+
 void MissionWorkspaceService::GenerateGrid(int rows, int columns) {
     MissionWorkspace workspace = ActiveWorkspace();
     if (workspace.id.isEmpty() || rows < 2 || columns < 2 || !workspace.background.IsValid()) {
@@ -158,11 +182,56 @@ void MissionWorkspaceService::RequestGraphEditor() {
     emit SigGraphEditorRequested();
 }
 
+void MissionWorkspaceService::Undo() {
+    if (!CanUndo()) {
+        return;
+    }
+
+    MissionWorkspace current = ActiveWorkspace();
+    MissionWorkspace previous = undo_stack_.takeLast();
+    if (!current.id.isEmpty()) {
+        redo_stack_.push_back(current);
+    }
+    Restore(std::move(previous));
+}
+
+void MissionWorkspaceService::Redo() {
+    if (!CanRedo()) {
+        return;
+    }
+
+    MissionWorkspace current = ActiveWorkspace();
+    MissionWorkspace next = redo_stack_.takeLast();
+    if (!current.id.isEmpty()) {
+        undo_stack_.push_back(current);
+    }
+    Restore(std::move(next));
+}
+
+bool MissionWorkspaceService::CanUndo() const {
+    return !undo_stack_.isEmpty();
+}
+
+bool MissionWorkspaceService::CanRedo() const {
+    return !redo_stack_.isEmpty();
+}
+
 QString MissionWorkspaceService::NextNodeLabel(const MissionWorkspace& workspace) const {
     return QStringLiteral("N%1").arg(workspace.nodes.size() + 1);
 }
 
 void MissionWorkspaceService::Commit(MissionWorkspace workspace) {
+    if (gateway_ != nullptr) {
+        MissionWorkspace current = ActiveWorkspace();
+        if (!current.id.isEmpty()) {
+            undo_stack_.push_back(current);
+            redo_stack_.clear();
+        }
+        gateway_->ReplaceWorkspace(std::move(workspace));
+    }
+}
+
+void MissionWorkspaceService::Restore(MissionWorkspace workspace) {
     if (gateway_ != nullptr) {
         gateway_->ReplaceWorkspace(std::move(workspace));
     }

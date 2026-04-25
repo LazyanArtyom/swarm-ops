@@ -32,6 +32,15 @@
     <file>icons/open_light.svg</file>
     <file>icons/save_dark.svg</file>
     <file>icons/save_light.svg</file>
+    <file>icons/mission_attacker.png</file>
+    <file>icons/mission_border.png</file>
+    <file>icons/mission_corner.png</file>
+    <file>icons/mission_delete_node.svg</file>
+    <file>icons/mission_drone.png</file>
+    <file>icons/mission_edge.svg</file>
+    <file>icons/mission_generic.png</file>
+    <file>icons/mission_grid.svg</file>
+    <file>icons/mission_target.svg</file>
   </qresource>
 
 </RCC>

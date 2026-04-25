@@ -3,6 +3,7 @@
 #include <QGraphicsObject>
 #include <QGraphicsView>
 #include <QHash>
+#include <QPoint>
 #include <QWidget>
 
 #include "app/mission/mission_workspace.h"
@@ -23,22 +24,33 @@ class GraphNodeItem final : public QGraphicsObject {
     [[nodiscard]] QRectF boundingRect() const override;
     void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
 
+   signals:
+    void SigPositionChanged(const QString& node_id, QPointF position);
+
    protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
 
    private:
     GraphNode node_;
 };
 
-class GraphEdgeItem final : public QGraphicsLineItem {
+class GraphEdgeItem final : public QObject, public QGraphicsLineItem {
+    Q_OBJECT
+
    public:
-    GraphEdgeItem(GraphEdge edge, const QPointF& start, const QPointF& end,
+    GraphEdgeItem(GraphEdge edge, GraphNodeItem* start_item, GraphNodeItem* end_item,
                   QGraphicsItem* parent = nullptr);
 
     [[nodiscard]] QString EdgeId() const;
 
+   public slots:
+    void UpdatePosition();
+
    private:
     GraphEdge edge_;
+    GraphNodeItem* start_item_{nullptr};
+    GraphNodeItem* end_item_{nullptr};
 };
 
 class GraphEditorView final : public QGraphicsView {
@@ -52,17 +64,30 @@ class GraphEditorView final : public QGraphicsView {
 
    protected:
     void contextMenuEvent(QContextMenuEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
 
    private:
     void RebuildScene();
+    void CancelPendingEdge();
+    void ShowGridDialog();
     [[nodiscard]] GraphNodeItem* NodeItemAt(const QPoint& view_pos) const;
     [[nodiscard]] GraphEdgeItem* EdgeItemAt(const QPoint& view_pos) const;
+    [[nodiscard]] bool IsPanGesture(const QMouseEvent* event) const;
 
     QGraphicsScene* scene_{nullptr};
     MissionWorkspace workspace_;
     QHash<QString, GraphNodeItem*> node_items_;
     QString pending_edge_start_node_id_;
+    QPoint last_pan_pos_;
+    bool panning_{false};
+    bool space_pressed_{false};
+    bool auto_fit_pending_{true};
 };
 
 class GraphEditorPage final : public QWidget {
@@ -74,8 +99,6 @@ class GraphEditorPage final : public QWidget {
    private:
     void OnWorkspaceChanged(const MissionWorkspace& workspace);
 
-    QLabel* title_label_{nullptr};
-    QLabel* bounds_label_{nullptr};
     GraphEditorView* editor_{nullptr};
 };
 

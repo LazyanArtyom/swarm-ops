@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QByteArray>
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QIcon>
@@ -21,6 +22,20 @@ constexpr auto kUiLogCategory = "ui";
     return text.toUtf8().toStdString();
 }
 
+void ConfigureWebEngineLogging() {
+    QByteArray flags = qgetenv("QTWEBENGINE_CHROMIUM_FLAGS");
+    if (!flags.contains("--log-level")) {
+        if (!flags.isEmpty()) {
+            flags.append(' ');
+        }
+        flags.append("--log-level=3");
+    }
+    if (!flags.contains("--disable-logging")) {
+        flags.append(" --disable-logging");
+    }
+    qputenv("QTWEBENGINE_CHROMIUM_FLAGS", flags);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -33,6 +48,8 @@ int main(int argc, char** argv) {
 
     QApplication::setHighDpiScaleFactorRoundingPolicy(
         Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+
+    ConfigureWebEngineLogging();
 
     QApplication app(argc, argv);
     QApplication::setOrganizationName(app_info.vendor);
