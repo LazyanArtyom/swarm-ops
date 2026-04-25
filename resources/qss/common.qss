@@ -1,0 +1,576 @@
+/* =========================================================
+   App Theme
+   Minimal role-based QSS. Colors and metrics are provided by
+   ThemeLoader tokens; widgets opt into surfaces by object name.
+   ========================================================= */
+
+* {
+  font-family: "${FONT_UI_FAMILY}";
+  font-size: ${FONT_BASE_PT}pt;
+  color: ${FG};
+  outline: none;
+}
+
+QWidget {
+  background: ${BG_WINDOW};
+  color: ${FG};
+}
+
+QLabel[role="muted"],
+QWidget:disabled {
+  color: ${FG_MUTED};
+}
+
+/* =========================================================
+   Main Surfaces
+   ========================================================= */
+
+QMainWindow {
+  background: ${BG_WINDOW};
+  border: 0;
+}
+
+QWidget#central_panel,
+QStackedWidget#central_panel_stack,
+QTabWidget#central_panel_tabs,
+QTabWidget#central_panel_tabs::pane {
+  background: ${BG_WINDOW};
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+QWidget[uiComponent="panel-shell"] {
+  background: ${BG_SURFACE};
+  border: 0;
+  margin: 0;
+}
+
+QWidget[uiComponent="panel-content"] {
+  background: ${BG_SURFACE};
+  border: 0;
+  margin: 0;
+}
+
+QWidget[uiComponent="panel-scroll-area"],
+QWidget[uiComponent="panel-scroll-area"] > QWidget,
+QWidget[uiComponent="panel-scroll-area"] QScrollBar {
+  background: transparent;
+  border: 0;
+}
+
+QWidget[uiComponent="panel-header"] {
+  background: ${BG_WINDOW};
+  border: 0;
+  border-bottom: 1px solid ${BORDER};
+}
+
+QLabel[uiComponent="panel-title"] {
+  background: transparent;
+  color: ${FG};
+  padding: ${SPACE_XS}px ${SPACE_MD}px;
+}
+
+QWidget[uiComponent="console-header-controls"] {
+  background: transparent;
+  margin: 0;
+  padding: 0 ${SPACE_XS}px 0 0;
+}
+
+QWidget[uiComponent="console-header-controls"] QComboBox[consoleHeaderControl="true"],
+QWidget[uiComponent="console-header-controls"] QLineEdit[consoleHeaderControl="true"] {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: 0;
+  color: ${FG};
+  min-height: ${CONSOLE_HEADER_CONTROL_HEIGHT_PX}px;
+  max-height: ${CONSOLE_HEADER_CONTROL_HEIGHT_PX}px;
+  padding: 0 ${SPACE_SM}px;
+}
+
+QWidget[uiComponent="console-header-controls"] QLineEdit[consoleHeaderControl="true"] {
+  selection-background-color: ${STATE_SELECTED};
+  selection-color: ${ON_PRIMARY};
+}
+
+QToolButton#panel_close_button {
+  background: transparent;
+  border: 0;
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG_MUTED};
+  margin: 0;
+  padding: 0;
+}
+
+QToolButton#panel_close_button:hover {
+  background: ${STATE_HOVER};
+  color: ${FG};
+}
+
+QToolButton#panel_close_button:pressed {
+  background: ${STATE_PRESSED};
+  color: ${FG};
+}
+
+QWidget#info_empty_state,
+QLabel#info_empty_title,
+QLabel#info_empty_message {
+  background: transparent;
+}
+
+QLabel#info_empty_title {
+  color: ${FG};
+  font-weight: 600;
+}
+
+QLabel#info_empty_message {
+  color: ${FG_MUTED};
+}
+
+QDialog#settings_dialog {
+  background: ${BG_WINDOW};
+}
+
+QListWidget#settings_navigation {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: 0;
+  outline: 0;
+  padding: ${SPACE_XS}px;
+}
+
+QListWidget#settings_navigation::item {
+  background: transparent;
+  border: 0;
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG};
+  margin: 0;
+  padding: ${SPACE_SM}px ${SPACE_MD}px;
+}
+
+QListWidget#settings_navigation::item:hover {
+  background: ${STATE_HOVER};
+}
+
+QListWidget#settings_navigation::item:selected {
+  background: ${STATE_SELECTED};
+  border-left: 2px solid ${PRIMARY};
+  color: ${FG};
+}
+
+QStackedWidget#settings_content {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: 0;
+}
+
+QWidget#settings_page {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+QWidget[uiComponent="settings-row"] {
+  background: transparent;
+  border: 0;
+}
+
+QWidget[uiComponent="settings-field-host"] {
+  background: transparent;
+  border: 0;
+}
+
+QWidget#settings_page QLabel,
+QWidget[uiComponent="settings-row"] QLabel {
+  background: transparent;
+}
+
+QLabel[uiComponent="settings-label"] {
+  color: ${FG};
+  padding: 0;
+}
+
+QComboBox[settingsRole="field"],
+QLineEdit[settingsRole="field"] {
+  background: ${BG_WINDOW};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  min-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
+  max-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
+  padding: 0 30px 0 10px;
+}
+
+QComboBox[settingsRole="field"]:focus,
+QLineEdit[settingsRole="field"]:focus {
+  border: 1px solid ${PRIMARY};
+}
+
+QComboBox[settingsRole="field"]::drop-down {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid ${BORDER};
+  subcontrol-origin: padding;
+  subcontrol-position: top right;
+  width: 28px;
+}
+
+QComboBox[settingsRole="field"]::down-arrow {
+  image: none;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid ${FG_MUTED};
+  height: 0;
+  width: 0;
+}
+
+QComboBox[settingsRole="field"] QAbstractItemView,
+QAbstractItemView#settings_popup {
+  background: ${BG_ELEVATED};
+  border: 1px solid ${BORDER};
+  color: ${FG};
+  min-height: ${SETTINGS_POPUP_MIN_HEIGHT_PX}px;
+  outline: 0;
+  selection-background-color: ${STATE_SELECTED};
+  selection-color: ${ON_PRIMARY};
+}
+
+QLabel#settings_restart_hint {
+  background: transparent;
+  color: ${FG_MUTED};
+}
+
+QDialog#settings_dialog QDialogButtonBox {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid ${BORDER};
+  padding-top: ${SPACE_MD}px;
+}
+
+QSplitter::handle {
+  background: ${BORDER};
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 1px;
+  height: 1px;
+}
+
+QSplitter::handle:hover {
+  background: ${BORDER};
+}
+
+/* =========================================================
+   Chrome
+   ========================================================= */
+
+QToolBar[uiComponent="toolbar-chrome"],
+QStatusBar {
+  background: ${BG_SURFACE};
+  border: 0;
+}
+
+QMenuBar[uiComponent="menu-chrome"] {
+  background: ${BG_WINDOW};
+  border: 0;
+}
+
+QMenuBar[uiComponent="menu-chrome"],
+QToolBar[uiComponent="toolbar-chrome"] {
+  border-bottom: 1px solid ${BORDER};
+}
+
+QStatusBar {
+  border-top: 1px solid ${BORDER};
+}
+
+QMenuBar::item {
+  background: transparent;
+  padding: ${SPACE_XS}px ${SPACE_MD}px;
+}
+
+QMenuBar::item:selected {
+  background: ${STATE_HOVER};
+}
+
+QToolBar[uiComponent="toolbar-chrome"] {
+  padding: ${SPACE_SM}px;
+  spacing: ${SPACE_SM}px;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QToolButton {
+  background: transparent;
+  border: 0;
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG};
+  padding: ${TOOLBAR_BUTTON_PADDING_Y_PX}px ${TOOLBAR_BUTTON_PADDING_X_PX}px;
+} 
+
+QToolBar[uiComponent="toolbar-chrome"] QToolButton:hover {
+  background: ${STATE_HOVER};
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QToolButton:pressed,
+QToolBar[uiComponent="toolbar-chrome"] QToolButton:checked {
+  background: ${STATE_PRESSED};
+}
+
+QToolBar[uiComponent="toolbar-chrome"]::separator {
+  background: ${BORDER};
+  margin: ${SPACE_XS}px ${SPACE_SM}px;
+  width: 1px;
+}
+
+QStatusBar::item {
+  border: 0;
+}
+
+/* =========================================================
+   Menus
+   ========================================================= */
+
+QMenu {
+  background: ${BG_ELEVATED};
+  border: 1px solid ${BORDER};
+  color: ${FG};
+  padding: ${SPACE_XS}px ${SPACE_XS}px;
+}
+
+QMenu::item {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: ${RADIUS_SM}px;
+  margin: 1px 0;
+  padding: ${SPACE_SM}px ${SPACE_LG}px ${SPACE_SM}px ${SPACE_SM}px;
+}
+
+QMenu::item:selected {
+  background: ${STATE_HOVER};
+  border: 1px solid transparent;
+}
+
+QMenu::item:disabled {
+  color: ${FG_DISABLED};
+}
+
+QMenu::icon,
+QMenu::indicator {
+  left: ${SPACE_SM}px;
+  width: ${ICON_SM_PX}px;
+  height: ${ICON_SM_PX}px;
+}
+
+QMenu::separator {
+  background: ${BORDER};
+  height: 1px;
+  margin: ${SPACE_XS}px ${SPACE_SM}px;
+}
+
+/* =========================================================
+   Navigation
+   ========================================================= */
+
+QListWidget#navigation_list {
+  background: ${BG_SURFACE};
+  border: 0;
+  outline: 0;
+  padding: ${SPACE_XS}px;
+}
+
+QListWidget#navigation_list::item {
+  background: transparent;
+  border: 0;
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG};
+  margin: 0;
+  padding: ${SPACE_SM}px ${SPACE_MD}px;
+}
+
+QListWidget#navigation_list::item:hover {
+  background: ${STATE_HOVER};
+}
+
+QListWidget#navigation_list::item:selected {
+  background: ${PRIMARY_CONTAINER};
+  color: ${ON_PRIMARY_CONTAINER};
+}
+
+/* =========================================================
+   Inputs And Views
+   ========================================================= */
+
+QLineEdit,
+QTextEdit,
+QPlainTextEdit,
+QSpinBox,
+QDoubleSpinBox,
+QComboBox,
+QDateEdit,
+QTimeEdit,
+QDateTimeEdit {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG};
+  min-height: ${CONTROL_HEIGHT_PX}px;
+  padding: ${SPACE_XS}px ${SPACE_SM}px;
+  selection-background-color: ${STATE_SELECTED};
+  selection-color: ${ON_PRIMARY};
+}
+
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QComboBox:focus,
+QDateEdit:focus,
+QTimeEdit:focus,
+QDateTimeEdit:focus {
+  border: 1px solid ${PRIMARY};
+}
+
+QTextEdit#console_output {
+  font-family: "${FONT_MONO_FAMILY}";
+  font-size: ${FONT_MONO_PT}pt;
+}
+
+QTextEdit#console_output {
+  background: ${BG_SURFACE};
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+
+QAbstractScrollArea,
+QAbstractScrollArea::viewport {
+  background: transparent;
+  border: 0;
+}
+
+QComboBox QAbstractItemView {
+  background: ${BG_ELEVATED};
+  border: 1px solid ${BORDER};
+  color: ${FG};
+  selection-background-color: ${STATE_SELECTED};
+  selection-color: ${ON_PRIMARY};
+}
+
+QHeaderView::section {
+  background: ${BG_SURFACE};
+  border: 0;
+  border-bottom: 1px solid ${BORDER};
+  color: ${FG_MUTED};
+  padding: ${SPACE_SM}px ${SPACE_MD}px;
+}
+
+QTableView,
+QTreeView,
+QListView {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  alternate-background-color: ${BG_SURFACE_ALT};
+}
+
+QAbstractItemView::item:hover {
+  background: ${STATE_HOVER};
+}
+
+QAbstractItemView::item:selected {
+  background: ${STATE_SELECTED};
+  color: ${ON_PRIMARY};
+}
+
+/* =========================================================
+   Buttons
+   ========================================================= */
+
+QPushButton {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  color: ${FG};
+  min-height: ${CONTROL_HEIGHT_PX}px;
+  padding: ${SPACE_XS}px ${SPACE_MD}px;
+}
+
+QPushButton:hover {
+  background: ${STATE_HOVER};
+}
+
+QPushButton:pressed {
+  background: ${STATE_PRESSED};
+}
+
+QPushButton:checked {
+  background: ${PRIMARY_CONTAINER};
+  border: 1px solid ${PRIMARY};
+  color: ${ON_PRIMARY_CONTAINER};
+}
+
+QPushButton:default {
+  border: 1px solid ${PRIMARY};
+}
+
+QPushButton:disabled {
+  color: ${FG_DISABLED};
+}
+
+QDialogButtonBox QPushButton {
+  margin-left: ${SPACE_XS}px;
+  min-height: ${DIALOG_BUTTON_MIN_HEIGHT_PX}px;
+  min-width: ${DIALOG_BUTTON_MIN_WIDTH_PX}px;
+  padding: ${DIALOG_BUTTON_PADDING_Y_PX}px ${DIALOG_BUTTON_PADDING_X_PX}px;
+}
+
+/* =========================================================
+   Scrollbars And Tooltips
+   ========================================================= */
+
+QScrollBar:vertical {
+  background: transparent;
+  border: 0;
+  margin: 0;
+  width: ${SCROLLBAR_EXTENT_PX}px;
+}
+
+QScrollBar:horizontal {
+  background: transparent;
+  border: 0;
+  height: ${SCROLLBAR_EXTENT_PX}px;
+  margin: 0;
+}
+
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal {
+  background: ${BORDER_STRONG};
+  border: 0;
+  border-radius: ${RADIUS_SM}px;
+}
+
+QScrollBar::handle:vertical {
+  min-height: ${SCROLLBAR_MIN_SLIDER_PX}px;
+}
+
+QScrollBar::handle:horizontal {
+  min-width: ${SCROLLBAR_MIN_SLIDER_PX}px;
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line,
+QScrollBar::add-page,
+QScrollBar::sub-page {
+  background: transparent;
+  border: 0;
+  height: 0;
+  width: 0;
+}
+
+QToolTip {
+  background: ${TOOLTIP_BG};
+  border: 1px solid ${BORDER_STRONG};
+  border-radius: ${RADIUS_SM}px;
+  color: ${TOOLTIP_FG};
+  font-size: ${FONT_TOOLTIP_PT}pt;
+  padding: ${TOOLTIP_PADDING_Y_PX}px ${TOOLTIP_PADDING_X_PX}px;
+}

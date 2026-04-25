@@ -1,0 +1,37 @@
+<RCC>
+  <!-- QSS -->
+  <qresource prefix="/theme">
+    <file>qss/common.qss</file>
+  </qresource>
+
+  <!-- Fonts -->
+  <qresource prefix="/theme">
+
+
+    <file>fonts/Inter-Regular.ttf</file>
+    <file>fonts/Inter-Medium.ttf</file>
+    <file>fonts/Inter-Italic.ttf</file>
+    <file>fonts/Inter-SemiBold.ttf</file>
+
+    <file>fonts/JetBrainsMono-Regular.ttf</file>
+    <file>fonts/JetBrainsMono-Medium.ttf</file>
+    <file>fonts/JetBrainsMono-Italic.ttf</file>
+    <file>fonts/JetBrainsMono-SemiBold.ttf</file>
+
+    <file>fonts/InterVariable.ttf</file>
+    <file>fonts/InterVariable-Italic.ttf</file>
+    <file>fonts/JetBrainsMono[wght].ttf</file>
+    <file>fonts/JetBrainsMono-Italic[wght].ttf</file>
+    <file>fonts/OFL.txt</file> <!-- license(s) -->
+  </qresource>
+
+  <!-- Icons -->
+  <qresource prefix="/theme">
+    <file>icons/app_icon.png</file>
+    <file>icons/open_dark.svg</file>
+    <file>icons/open_light.svg</file>
+    <file>icons/save_dark.svg</file>
+    <file>icons/save_light.svg</file>
+  </qresource>
+
+</RCC>

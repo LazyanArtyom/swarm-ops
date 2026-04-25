@@ -1,0 +1,300 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "QT_ROOT": "$env{HOME}/Qt/6.10.0/gcc_64",
+        "QTIFW_ROOT": "$env{HOME}/Qt/Tools/QtInstallerFramework/4.10"
+      }
+    },
+    {
+      "name": "mac-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "QT_ROOT": "$env{HOME}/Qt/6.10.1/macos",
+        "QTIFW_ROOT": ""
+      }
+    },
+    {
+      "name": "win-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "QT_ROOT": "C:/Qt/6.8.3/mingw_64",
+        "QTIFW_ROOT": "C:/Qt/Tools/QtInstallerFramework/4.11",
+        "MINGW_ROOT": "C:/Qt/Tools/mingw1310_64",
+        "CMAKE_CXX_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/g++.exe",
+        "CMAKE_RC_COMPILER": "C:/Qt/Tools/mingw1310_64/bin/windres.exe"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "inherits": "linux-base",
+      "displayName": "Linux Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-Og -g3 -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "linux-debug-asan",
+      "inherits": "linux-debug",
+      "displayName": "Linux Debug + ASan/UBSan",
+      "cacheVariables": {
+        "APP_ENABLE_ASAN": "ON",
+        "APP_ENABLE_UBSAN": "ON"
+      }
+    },
+    {
+      "name": "linux-debug-tsan",
+      "inherits": "linux-debug",
+      "displayName": "Linux Debug + TSan",
+      "cacheVariables": {
+        "APP_ENABLE_TSAN": "ON"
+      }
+    },
+    {
+      "name": "linux-release",
+      "inherits": "linux-base",
+      "displayName": "Linux Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "mac-debug",
+      "inherits": "mac-base",
+      "displayName": "macOS Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-Og -g3 -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "mac-debug-asan",
+      "inherits": "mac-debug",
+      "displayName": "macOS Debug + ASan/UBSan",
+      "cacheVariables": {
+        "APP_ENABLE_ASAN": "ON",
+        "APP_ENABLE_UBSAN": "ON"
+      }
+    },
+    {
+      "name": "mac-debug-tsan",
+      "inherits": "mac-debug",
+      "displayName": "macOS Debug + TSan",
+      "cacheVariables": {
+        "APP_ENABLE_TSAN": "ON"
+      }
+    },
+    {
+      "name": "mac-release",
+      "inherits": "mac-base",
+      "displayName": "macOS Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "win-debug",
+      "inherits": "win-base",
+      "displayName": "Windows MinGW Debug (Qt)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS_DEBUG": "-Og -g3 -fno-omit-frame-pointer"
+      }
+    },
+    {
+      "name": "win-debug-asan",
+      "inherits": "win-debug",
+      "displayName": "Windows MinGW Debug + ASan/UBSan",
+      "cacheVariables": {
+        "APP_ENABLE_ASAN": "ON",
+        "APP_ENABLE_UBSAN": "ON"
+      }
+    },
+    {
+      "name": "win-debug-tsan",
+      "inherits": "win-debug",
+      "displayName": "Windows MinGW Debug + TSan",
+      "cacheVariables": {
+        "APP_ENABLE_TSAN": "ON"
+      }
+    },
+    {
+      "name": "win-release",
+      "inherits": "win-base",
+      "displayName": "Windows MinGW Release (Qt)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug",
+      "jobs": 0
+    },
+    {
+      "name": "linux-debug-asan",
+      "configurePreset": "linux-debug-asan",
+      "jobs": 0
+    },
+    {
+      "name": "linux-debug-tsan",
+      "configurePreset": "linux-debug-tsan",
+      "jobs": 0
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release",
+      "jobs": 0
+    },
+    {
+      "name": "mac-debug",
+      "configurePreset": "mac-debug",
+      "jobs": 0
+    },
+    {
+      "name": "mac-debug-asan",
+      "configurePreset": "mac-debug-asan",
+      "jobs": 0
+    },
+    {
+      "name": "mac-debug-tsan",
+      "configurePreset": "mac-debug-tsan",
+      "jobs": 0
+    },
+    {
+      "name": "mac-release",
+      "configurePreset": "mac-release",
+      "jobs": 0
+    },
+    {
+      "name": "win-debug",
+      "configurePreset": "win-debug",
+      "jobs": 0
+    },
+    {
+      "name": "win-debug-asan",
+      "configurePreset": "win-debug-asan",
+      "jobs": 0
+    },
+    {
+      "name": "win-debug-tsan",
+      "configurePreset": "win-debug-tsan",
+      "jobs": 0
+    },
+    {
+      "name": "win-release",
+      "configurePreset": "win-release",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-debug",
+      "configurePreset": "linux-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-debug-asan",
+      "configurePreset": "linux-debug-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-debug-tsan",
+      "configurePreset": "linux-debug-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-debug",
+      "configurePreset": "mac-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-debug-asan",
+      "configurePreset": "mac-debug-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-debug-tsan",
+      "configurePreset": "mac-debug-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "mac-release",
+      "configurePreset": "mac-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "win-debug",
+      "configurePreset": "win-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "win-debug-asan",
+      "configurePreset": "win-debug-asan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "win-debug-tsan",
+      "configurePreset": "win-debug-tsan",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "win-release",
+      "configurePreset": "win-release",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

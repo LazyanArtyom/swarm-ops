@@ -1,0 +1,9 @@
+function Controller() {}
+
+Controller.prototype.TargetDirectoryPageCallback = function() {
+    var v = installer.value("ProductVersion");
+
+    if (systemInfo.kernelType === "winnt") {
+        installer.setValue("TargetDir", "@ApplicationsDir@/@APP_SLUG@-" + v);
+    }
+};

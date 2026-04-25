@@ -1,0 +1,657 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "configure-debug",
+      "type": "shell",
+      "command": "cmake --preset linux-debug",
+      "linux": {
+        "command": "cmake --preset linux-debug"
+      },
+      "osx": {
+        "command": "cmake --preset mac-debug"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --preset win-debug"
+        ]
+      }
+    },
+    {
+      "label": "configure-release",
+      "type": "shell",
+      "command": "cmake --preset linux-release",
+      "linux": {
+        "command": "cmake --preset linux-release"
+      },
+      "osx": {
+        "command": "cmake --preset mac-release"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --preset win-release"
+        ]
+      }
+    },
+    {
+      "label": "build-debug",
+      "type": "shell",
+      "command": "cmake --build --preset linux-debug",
+      "linux": {
+        "command": "cmake --build --preset linux-debug"
+      },
+      "osx": {
+        "command": "cmake --build --preset mac-debug"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --build --preset win-debug"
+        ]
+      },
+      "group": {
+        "kind": "build"
+      },
+      "dependsOn": [
+        "configure-debug"
+      ]
+    },
+    {
+      "label": "build-release",
+      "type": "shell",
+      "command": "cmake --build --preset linux-release",
+      "linux": {
+        "command": "cmake --build --preset linux-release"
+      },
+      "osx": {
+        "command": "cmake --build --preset mac-release"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --build --preset win-release"
+        ]
+      },
+      "group": {
+        "kind": "build"
+      },
+      "dependsOn": [
+        "configure-release"
+      ]
+    },
+    {
+      "label": "copy-compile-commands-debug",
+      "type": "shell",
+      "command": "cp build/linux-debug/compile_commands.json ./ && touch compile_commands.json",
+      "linux": {
+        "command": "cp build/linux-debug/compile_commands.json ./ && touch compile_commands.json"
+      },
+      "osx": {
+        "command": "cp build/mac-debug/compile_commands.json ./ && touch compile_commands.json"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "cp build/win-debug/compile_commands.json ./compile_commands.json && touch compile_commands.json"
+        ]
+      },
+      "dependsOn": [
+        "build-debug"
+      ]
+    },
+    {
+      "label": "copy-compile-commands-release",
+      "type": "shell",
+      "command": "cp build/linux-release/compile_commands.json ./ && touch compile_commands.json",
+      "linux": {
+        "command": "cp build/linux-release/compile_commands.json ./ && touch compile_commands.json"
+      },
+      "osx": {
+        "command": "cp build/mac-release/compile_commands.json ./ && touch compile_commands.json"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "cp build/win-release/compile_commands.json ./compile_commands.json && touch compile_commands.json"
+        ]
+      },
+      "dependsOn": [
+        "build-release"
+      ]
+    },
+    {
+      "label": "build-project-debug",
+      "dependsOn": [
+        "copy-compile-commands-debug"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "build-project-release",
+      "dependsOn": [
+        "copy-compile-commands-release"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "test-debug",
+      "type": "shell",
+      "command": "ctest --preset linux-debug",
+      "linux": {
+        "command": "ctest --preset linux-debug"
+      },
+      "osx": {
+        "command": "ctest --preset mac-debug"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "export PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\"; if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; ctest --preset win-debug"
+        ]
+      },
+      "dependsOn": [
+        "build-project-debug"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "test-release",
+      "type": "shell",
+      "command": "ctest --preset linux-release",
+      "linux": {
+        "command": "ctest --preset linux-release"
+      },
+      "osx": {
+        "command": "ctest --preset mac-release"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "export PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\"; if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; ctest --preset win-release"
+        ]
+      },
+      "dependsOn": [
+        "build-project-release"
+      ],
+      "dependsOrder": "sequence",
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "run-tool-debug",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/linux-debug/swarmops",
+      "linux": {
+        "command": "${workspaceFolder}/build/linux-debug/swarmops"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/build/mac-debug/swarmops.app/Contents/MacOS/swarmops"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\" ./build/win-debug/swarmops.exe"
+        ]
+      },
+      "dependsOn": [
+        "build-project-debug"
+      ],
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "run-tool-release",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/linux-release/swarmops",
+      "linux": {
+        "command": "${workspaceFolder}/build/linux-release/swarmops"
+      },
+      "osx": {
+        "command": "${workspaceFolder}/build/mac-release/swarmops.app/Contents/MacOS/swarmops"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\" ./build/win-release/swarmops.exe"
+        ]
+      },
+      "dependsOn": [
+        "build-project-release"
+      ],
+      "group": {
+        "kind": "test"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "configure-debug-asan",
+      "type": "shell",
+      "command": "cmake --preset linux-debug-asan",
+      "linux": {
+        "command": "cmake --preset linux-debug-asan"
+      },
+      "osx": {
+        "command": "cmake --preset mac-debug-asan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --preset win-debug-asan"
+        ]
+      }
+    },
+    {
+      "label": "configure-debug-tsan",
+      "type": "shell",
+      "command": "cmake --preset linux-debug-tsan",
+      "linux": {
+        "command": "cmake --preset linux-debug-tsan"
+      },
+      "osx": {
+        "command": "cmake --preset mac-debug-tsan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --preset win-debug-tsan"
+        ]
+      }
+    },
+    {
+      "label": "build-debug-asan",
+      "type": "shell",
+      "command": "cmake --build --preset linux-debug-asan",
+      "linux": {
+        "command": "cmake --build --preset linux-debug-asan"
+      },
+      "osx": {
+        "command": "cmake --build --preset mac-debug-asan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --build --preset win-debug-asan"
+        ]
+      },
+      "group": {
+        "kind": "build"
+      },
+      "dependsOn": [
+        "configure-debug-asan"
+      ]
+    },
+    {
+      "label": "build-debug-tsan",
+      "type": "shell",
+      "command": "cmake --build --preset linux-debug-tsan",
+      "linux": {
+        "command": "cmake --build --preset linux-debug-tsan"
+      },
+      "osx": {
+        "command": "cmake --build --preset mac-debug-tsan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; cmake --build --preset win-debug-tsan"
+        ]
+      },
+      "group": {
+        "kind": "build"
+      },
+      "dependsOn": [
+        "configure-debug-tsan"
+      ]
+    },
+    {
+      "label": "kb: build ASan/UBSan",
+      "type": "shell",
+      "dependsOn": [
+        "build-debug-asan"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: build TSan",
+      "type": "shell",
+      "dependsOn": [
+        "build-debug-tsan"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "test-debug-asan",
+      "type": "shell",
+      "command": "ctest --preset linux-debug-asan",
+      "linux": {
+        "command": "ctest --preset linux-debug-asan"
+      },
+      "osx": {
+        "command": "ctest --preset mac-debug-asan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "export PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\"; if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; ctest --preset win-debug-asan"
+        ]
+      },
+      "dependsOn": [
+        "build-debug-asan"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "test-debug-tsan",
+      "type": "shell",
+      "command": "ctest --preset linux-debug-tsan",
+      "linux": {
+        "command": "ctest --preset linux-debug-tsan"
+      },
+      "osx": {
+        "command": "ctest --preset mac-debug-tsan"
+      },
+      "windows": {
+        "command": "C:\\msys64\\msys2_shell.cmd",
+        "args": [
+          "-defterm",
+          "-no-start",
+          "-mingw64",
+          "-here",
+          "-lc",
+          "export PATH=\"/c/Qt/6.8.3/mingw_64/bin:/c/Qt/Tools/mingw1310_64/bin:$PATH\"; if [ -f ~/.venvs/conan2/bin/activate ]; then source ~/.venvs/conan2/bin/activate; fi; ctest --preset win-debug-tsan"
+        ]
+      },
+      "dependsOn": [
+        "build-debug-tsan"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "clang-tidy: file",
+      "type": "process",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/scripts/run-clang-tidy.sh",
+        "build/linux-debug",
+        "${file}"
+      ],
+      "linux": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/scripts/run-clang-tidy.sh",
+          "build/linux-debug",
+          "${file}"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/scripts/run-clang-tidy.sh",
+          "build/mac-debug",
+          "${file}"
+        ]
+      },
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\run-clang-tidy.ps1",
+          "build\\win-debug",
+          "${file}"
+        ]
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "clang-tidy: project",
+      "type": "process",
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/scripts/run-clang-tidy.sh",
+        "build/linux-debug"
+      ],
+      "linux": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/scripts/run-clang-tidy.sh",
+          "build/linux-debug"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "${workspaceFolder}/scripts/run-clang-tidy.sh",
+          "build/mac-debug"
+        ]
+      },
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}\\scripts\\run-clang-tidy.ps1",
+          "build\\win-debug"
+        ]
+      },
+      "dependsOn": [
+        "build-project-debug"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "kb: clang-tidy project",
+      "type": "shell",
+      "dependsOn": [
+        "clang-tidy: project"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "deploy: installer",
+      "type": "shell",
+      "command": "bash",
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-lc",
+          "chmod +x packaging/scripts/make_installer_linux.sh && packaging/scripts/make_installer_linux.sh build/linux-release"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-lc",
+          "chmod +x packaging/scripts/make_installer_mac.sh && packaging/scripts/make_installer_mac.sh build/mac-release"
+        ]
+      },
+      "windows": {
+        "command": "powershell",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "$env:CMAKE_COMMAND='C:\\msys64\\mingw64\\bin\\cmake.exe'; $env:PATH='C:\\Qt\\6.8.3\\mingw_64\\bin;C:\\Qt\\Tools\\mingw1310_64\\bin;'+$env:PATH; packaging\\scripts\\make_installer_win.bat \"build\\win-release\" \"$PWD\""
+        ]
+      },
+      "dependsOn": [
+        "test-release"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: build debug",
+      "type": "shell",
+      "dependsOn": [
+        "build-project-debug"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: build release",
+      "type": "shell",
+      "dependsOn": [
+        "build-project-release"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: run debug",
+      "type": "shell",
+      "dependsOn": [
+        "run-tool-debug"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: run release",
+      "type": "shell",
+      "dependsOn": [
+        "run-tool-release"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "kb: deploy installer",
+      "type": "shell",
+      "dependsOn": [
+        "deploy: installer"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

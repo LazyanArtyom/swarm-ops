@@ -1,0 +1,43 @@
+{
+    "editor.fontFamily": "Jetbrains Mono, Menlo, Monaco, 'Courier New', monospace",
+    "terminal.integrated.fontSize": 14,
+    "terminal.integrated.profiles.windows": {
+        "MSYS2 MinGW64": {
+            "path": "C:\\msys64\\msys2_shell.cmd",
+            "args": [
+                "-defterm",
+                "-no-start",
+                "-mingw64",
+                "-here"
+            ]
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "MSYS2 MinGW64",
+    "terminal.integrated.automationProfile.windows": {
+        "path": "C:\\Windows\\System32\\cmd.exe"
+    },
+    "editor.fontSize": 14,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "files.autoSave": "afterDelay",
+    "search.exclude": {
+        "**/build": true
+    },
+    "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
+    "C_Cpp.codeAnalysis.runAutomatically": false,
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+    "C_Cpp.codeAnalysis.clangTidy.path": "clang-tidy",
+    "C_Cpp.codeAnalysis.clangTidy.args": [
+        "--config-file=${workspaceFolder}/.clang-tidy",
+        "--header-filter=${workspaceFolder}/.*"
+    ],
+    "cmake.useCMakePresets": "always",
+    "cmake.configureOnOpen": true,
+    "cmake.generator": "Ninja",
+    "cmake.parallelJobs": 0,
+    "todo-tree.tree.scanMode": "workspace",
+    "files.associations": {
+        "unordered_set": "cpp"
+    }
+}

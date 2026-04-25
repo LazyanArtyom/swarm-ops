@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>@APP_ID@</Name>
+
+    <Version>@APP_VERSION@</Version>
+    <Title>@APP_DISPLAY_NAME@ Installer</Title>
+    <Publisher>@APP_VENDOR@</Publisher>
+@IFW_INSTALLER_ICON_XML@
+
+    <TargetDir>@ApplicationsDir@/@APP_SLUG@-@APP_VERSION@</TargetDir>
+
+    <StartMenuDir>@APP_DISPLAY_NAME@</StartMenuDir>
+    <MaintenanceToolName>@APP_SLUG@-uninstall</MaintenanceToolName>
+    <MaintenanceToolIniFile>@APP_SLUG@-maintenance.ini</MaintenanceToolIniFile>
+</Installer>

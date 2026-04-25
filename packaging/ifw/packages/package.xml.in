@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+  <DisplayName>@APP_DISPLAY_NAME@</DisplayName>
+  <Description>@APP_VENDOR@ @APP_DISPLAY_NAME@</Description>
+  <Version>@APP_VERSION@</Version>
+  <ReleaseDate>@APP_RELEASE_DATE@</ReleaseDate>
+  <Default>true</Default>
+  <ForcedInstallation>true</ForcedInstallation>
+  <Essential>true</Essential>
+  <Script>installscript.qs</Script>
+  <Vendor>@APP_VENDOR@</Vendor>
+  <Name>@APP_ID@</Name>
+  <Licenses/>
+</Package>

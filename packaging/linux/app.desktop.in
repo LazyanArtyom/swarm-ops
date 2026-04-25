@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=@APP_DISPLAY_NAME@ @APP_VERSION@
+Comment=@APP_VENDOR@ @APP_DISPLAY_NAME@
+Exec=$$EXEC_PATH$$
+Icon=@APP_SLUG@
+Terminal=false
+Categories=Utility;Qt;

@@ -1,0 +1,88 @@
+function Component() {}
+
+Component.prototype.createOperations = function() {
+    component.createOperations();
+
+    var v      = installer.value("ProductVersion");
+    var target = installer.value("TargetDir");
+
+    if (systemInfo.kernelType === "linux") {
+
+        var home = installer.environmentVariable("HOME");
+        var isUserInstall = (home && home.length > 0 && target.indexOf(home) === 0);
+
+        var appDir  = isUserInstall ? (home + "/.local/share/applications") : "/usr/share/applications";
+        var iconDir = isUserInstall ? (home + "/.local/share/icons/hicolor/512x512/apps") : "/usr/share/icons/hicolor/512x512/apps";
+
+        component.addOperation("Mkdir", appDir);
+        component.addOperation("Mkdir", iconDir);
+
+        // Copy icon into theme directory
+        component.addOperation(
+            "Copy",
+            target + "/share/icons/hicolor/512x512/apps/@APP_SLUG@.png",
+            iconDir + "/@APP_SLUG@.png"
+        );
+
+        // Desktop entries:
+        //  - stable hidden: used for GNOME dock/app-id matching
+        //  - versioned visible: shown in app grid (one icon per installed version)
+        var desktopStable     = appDir + "/@APP_SLUG@.desktop";
+        var desktopVersioned  = appDir + "/@APP_SLUG@-" + v + ".desktop";
+
+        component.addOperation("Copy", target + "/share/applications/@APP_SLUG@.desktop", desktopStable);
+        component.addOperation("Copy", target + "/share/applications/@APP_SLUG@.desktop", desktopVersioned);
+
+        // Exec path points to versioned binary (your packaging script renames bin/<slug>-<ver>)
+        var execPath = target + "/bin/@APP_SLUG@-" + v;
+
+        var sedExecStable =
+            "sed -i 's#\\$\\$EXEC_PATH\\$\\$#" + execPath + "#' '" + desktopStable + "'";
+        var sedExecVersioned =
+            "sed -i 's#\\$\\$EXEC_PATH\\$\\$#" + execPath + "#' '" + desktopVersioned + "'";
+
+        component.addOperation("Execute", "/bin/sh", "-c", sedExecStable);
+        component.addOperation("Execute", "/bin/sh", "-c", sedExecVersioned);
+
+        // Ensure visible launcher has versioned title (Display Name + version)
+        var sedName =
+            "sed -i 's#^Name=.*#Name=@APP_DISPLAY_NAME@ " + v + "#' '" + desktopVersioned + "'";
+        component.addOperation("Execute", "/bin/sh", "-c", sedName);
+
+        // Hide stable launcher from app grid, keep only for dock matching
+        var hideStable =
+            "grep -q '^NoDisplay=' '" + desktopStable + "' && " +
+            "sed -i 's#^NoDisplay=.*#NoDisplay=true#' '" + desktopStable + "' || " +
+            "echo 'NoDisplay=true' >> '" + desktopStable + "'";
+        component.addOperation("Execute", "/bin/sh", "-c", hideStable);
+
+        // For user installs: set Icon to absolute path for immediate GNOME rendering
+        if (isUserInstall) {
+            var iconPath = target + "/share/icons/hicolor/512x512/apps/@APP_SLUG@.png";
+
+            var sedIconStable =
+                "sed -i 's#^Icon=.*#Icon=" + iconPath + "#' '" + desktopStable + "'";
+            var sedIconVersioned =
+                "sed -i 's#^Icon=.*#Icon=" + iconPath + "#' '" + desktopVersioned + "'";
+
+            component.addOperation("Execute", "/bin/sh", "-c", sedIconStable);
+            component.addOperation("Execute", "/bin/sh", "-c", sedIconVersioned);
+
+            component.addOperation(
+                "Execute", "/bin/sh", "-c",
+                "update-desktop-database \"" + home + "/.local/share/applications\" || true"
+            );
+        } else {
+            component.addOperation("Execute", "/bin/sh", "-c", "update-desktop-database /usr/share/applications || true");
+            component.addOperation("Execute", "/bin/sh", "-c", "gtk-update-icon-cache -f /usr/share/icons/hicolor || true");
+        }
+    }
+
+    if (systemInfo.kernelType === "winnt") {
+        var sm  = installer.value("StartMenuDir");
+        var exe = target + "\\bin\\@APP_SLUG@.exe";
+
+        component.addOperation("CreateShortcut", exe, sm + "\\@APP_DISPLAY_NAME@ " + v + ".lnk");
+        component.addOperation("CreateShortcut", exe, "@DesktopDir@\\@APP_DISPLAY_NAME@ " + v + ".lnk");
+    }
+};
