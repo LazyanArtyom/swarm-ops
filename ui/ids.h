@@ -4,7 +4,7 @@
 
 namespace app::ui::ids {
 
-// ---- Pages (central workspace) ----
-inline const QString kPageHome = QStringLiteral("page.home");
+inline const QString kPageMissionMapSelection = QStringLiteral("page.mission.map_selection");
+inline const QString kPageMissionGraphEditor = QStringLiteral("page.mission.graph_editor");
 
 }  // namespace app::ui::ids

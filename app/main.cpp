@@ -9,7 +9,7 @@
 #include "app/app_info.h"
 #include "app/app_translator.h"
 #include "app/main_window.h"
-#include "app/modules/home_module.h"
+#include "app/modules/mission_workspace_module.h"
 #include "logging/logger.h"
 #include "ui/theme/theme_metrics.h"
 
@@ -48,8 +48,8 @@ int main(int argc, char** argv) {
     (void)translator.ApplyLanguage(context.Services().Settings().General().LanguageCode(),
                                    context.Services().Info());
 
-    app::modules::HomeModule home_module;
-    context.Bootstrap().RegisterModule(home_module);
+    app::modules::MissionWorkspaceModule mission_workspace_module;
+    context.Bootstrap().RegisterModule(mission_workspace_module);
 
     app::logging::Logger::Info(
         ToUtf8String(QCoreApplication::translate("AppLog", "Application started")));

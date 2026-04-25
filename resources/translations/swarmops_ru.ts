@@ -20,19 +20,6 @@
     </message>
 </context>
 <context>
-    <name>HomeModule</name>
-    <message>
-        <location filename="../../app/modules/home_module.cpp" line="14"/>
-        <source>Home</source>
-        <translation>Домой</translation>
-    </message>
-    <message>
-        <location filename="../../app/modules/home_module.cpp" line="15"/>
-        <source>General</source>
-        <translation>Основные</translation>
-    </message>
-</context>
-<context>
     <name>QObject</name>
     <message>
         <location filename="../../ui/dialogs/message_dialog.cpp" line="48"/>

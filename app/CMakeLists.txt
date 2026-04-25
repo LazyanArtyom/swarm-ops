@@ -27,8 +27,18 @@ add_executable(${APP_TARGET}
     controllers/workspace_controller.cpp
     modules/app_module.h
     modules/app_module.cpp
-    modules/home_module.h
-    modules/home_module.cpp
+    modules/mission_workspace_module.h
+    modules/mission_workspace_module.cpp
+    mission/mission_workspace.h
+    mission/mission_workspace_gateway.h
+    mission/in_memory_mission_workspace_gateway.h
+    mission/in_memory_mission_workspace_gateway.cpp
+    mission/mission_workspace_service.h
+    mission/mission_workspace_service.cpp
+    mission/ui/map_selection_page.h
+    mission/ui/map_selection_page.cpp
+    mission/ui/graph_editor_page.h
+    mission/ui/graph_editor_page.cpp
     main.cpp
     main_window.h
     main_window.cpp
@@ -78,6 +88,8 @@ target_link_libraries(${APP_TARGET}
         project_options
         project_warnings
         Qt6::Widgets
+        Qt6::WebChannel
+        Qt6::WebEngineWidgets
         app_ui
 )
 

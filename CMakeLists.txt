@@ -66,7 +66,7 @@ app_setup_conan()
 # Dependencies
 # =========================================================
 set(QT_MIN_VERSION 6.8)
-find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
+find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS Core Gui Widgets WebChannel WebEngineWidgets LinguistTools)
 find_package(spdlog CONFIG REQUIRED)
 
 # =========================================================

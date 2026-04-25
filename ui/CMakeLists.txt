@@ -54,10 +54,6 @@ target_sources(app_ui PRIVATE
     panels/navigation_panel.h
     panels/navigation_panel.cpp
 
-    # pages
-    pages/home_page.h
-    pages/home_page.cpp
-
     # dialogs
     dialogs/about_dialog.h
     dialogs/about_dialog.cpp

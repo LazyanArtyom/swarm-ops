@@ -4,7 +4,7 @@
 
 namespace app::modules {
 
-class HomeModule final : public IAppModule {
+class MissionWorkspaceModule final : public IAppModule {
    public:
     void RegisterPages(ui::workspace::PageRegistry& registry) override;
 };

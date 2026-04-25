@@ -3,6 +3,8 @@
 #include <QList>
 
 #include "app/app_services.h"
+#include "app/mission/mission_workspace_service.h"
+#include "ui/ids.h"
 #include "ui/panels/central_panel.h"
 #include "ui/panels/navigation_panel.h"
 #include "ui/workspace/page_registry.h"
@@ -17,6 +19,15 @@ NavigationController::NavigationController(const AppServices& services,
       navigation_panel_(navigation_panel),
       central_panel_(central_panel) {
     WireNavigation();
+    connect(&mission::MissionWorkspaceRuntime(), &mission::MissionWorkspaceService::SigGraphEditorRequested,
+            this, [this] {
+                if (central_panel_ != nullptr) {
+                    central_panel_->ShowPage(ui::ids::kPageMissionGraphEditor);
+                }
+                if (navigation_panel_ != nullptr) {
+                    navigation_panel_->SelectPage(ui::ids::kPageMissionGraphEditor);
+                }
+            });
 }
 
 void NavigationController::RefreshNavigationItems() {
