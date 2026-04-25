@@ -29,10 +29,19 @@ class GraphNodeItem final : public QGraphicsObject {
 
    protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent* event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
+    void mousePressEvent(QGraphicsSceneMouseEvent* event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
 
    private:
+    void SetConnectionAnchor(bool is_anchor);
+
     GraphNode node_;
+    bool hovered_{false};
+    bool connection_anchor_{false};
+
+    friend class GraphEditorView;
 };
 
 class GraphEdgeItem final : public QObject, public QGraphicsLineItem {
@@ -47,10 +56,18 @@ class GraphEdgeItem final : public QObject, public QGraphicsLineItem {
    public slots:
     void UpdatePosition();
 
+   protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant& value) override;
+    void hoverEnterEvent(QGraphicsSceneHoverEvent* event) override;
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
+
    private:
+    void UpdatePen();
+
     GraphEdge edge_;
     GraphNodeItem* start_item_{nullptr};
     GraphNodeItem* end_item_{nullptr};
+    bool hovered_{false};
 };
 
 class GraphEditorView final : public QGraphicsView {
@@ -74,7 +91,9 @@ class GraphEditorView final : public QGraphicsView {
 
    private:
     void RebuildScene();
+    void StartPendingEdge(GraphNodeItem* start_item);
     void CancelPendingEdge();
+    void UpdatePendingEdgePreview(QPointF scene_pos);
     void ShowGridDialog();
     [[nodiscard]] GraphNodeItem* NodeItemAt(const QPoint& view_pos) const;
     [[nodiscard]] GraphEdgeItem* EdgeItemAt(const QPoint& view_pos) const;
@@ -84,6 +103,7 @@ class GraphEditorView final : public QGraphicsView {
     MissionWorkspace workspace_;
     QHash<QString, GraphNodeItem*> node_items_;
     QString pending_edge_start_node_id_;
+    QGraphicsLineItem* pending_edge_preview_{nullptr};
     QPoint last_pan_pos_;
     bool panning_{false};
     bool space_pressed_{false};

@@ -27,6 +27,10 @@ namespace {
 constexpr qreal kNodeRadius = 18.0;
 constexpr auto kMissionLogCategory = "mission";
 
+QRectF NodeBodyRect() {
+    return QRectF(-kNodeRadius, -kNodeRadius, kNodeRadius * 2.0, kNodeRadius * 2.0);
+}
+
 QColor NodeColor(const GraphNode& node) {
     switch (node.category) {
         case GraphNodeCategory::kDrone:
@@ -101,29 +105,51 @@ QString GraphNodeItem::NodeId() const {
 }
 
 QRectF GraphNodeItem::boundingRect() const {
-    return QRectF(-kNodeRadius, -kNodeRadius, kNodeRadius * 2.0, kNodeRadius * 2.0);
+    return QRectF(-34.0, -34.0, 68.0, 76.0);
 }
 
 void GraphNodeItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* /*option*/,
                           QWidget* /*widget*/) {
     painter->setRenderHint(QPainter::Antialiasing);
 
+    const QRectF body_rect = NodeBodyRect();
+    if (hovered_ || isSelected() || connection_anchor_) {
+        const QColor halo = connection_anchor_ ? QColor(0, 196, 255, 78)
+                                               : (isSelected() ? QColor(66, 133, 244, 76)
+                                                               : QColor(255, 255, 255, 42));
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(halo);
+        painter->drawEllipse(body_rect.adjusted(-8.0, -8.0, 8.0, 8.0));
+
+        QPen ring(connection_anchor_ ? QColor(0, 214, 255, 235)
+                                     : (isSelected() ? QColor(92, 170, 255, 235)
+                                                     : QColor(255, 255, 255, 180)),
+                  connection_anchor_ || isSelected() ? 2.6 : 1.8);
+        ring.setCapStyle(Qt::RoundCap);
+        if (connection_anchor_) {
+            ring.setStyle(Qt::DashLine);
+        }
+        painter->setBrush(Qt::NoBrush);
+        painter->setPen(ring);
+        painter->drawEllipse(body_rect.adjusted(-4.0, -4.0, 4.0, 4.0));
+    }
+
     const QString icon_path = NodeIconPath(node_);
     if (!icon_path.isEmpty()) {
         const QPixmap icon(icon_path);
         if (!icon.isNull()) {
-            painter->setOpacity(isSelected() ? 0.72 : 1.0);
-            painter->drawPixmap(boundingRect().toRect(), icon);
+            painter->setOpacity(isSelected() ? 0.9 : 1.0);
+            painter->drawPixmap(body_rect.toRect(), icon);
             painter->setOpacity(1.0);
         }
     } else {
         painter->setPen(QPen(isSelected() ? QColor(255, 255, 255) : QColor(24, 28, 32), 2));
         painter->setBrush(NodeColor(node_));
-        painter->drawEllipse(boundingRect());
+        painter->drawEllipse(body_rect);
     }
 
     const QRectF label_rect(-kNodeRadius * 1.5, kNodeRadius + 2.0, kNodeRadius * 3.0, 16.0);
-    painter->setPen(QColor(255, 255, 255));
+    painter->setPen(QColor(255, 255, 255, hovered_ || isSelected() ? 245 : 214));
     painter->drawText(label_rect, Qt::AlignCenter, node_.label);
 }
 
@@ -134,10 +160,35 @@ QVariant GraphNodeItem::itemChange(GraphicsItemChange change, const QVariant& va
     return QGraphicsObject::itemChange(change, value);
 }
 
+void GraphNodeItem::hoverEnterEvent(QGraphicsSceneHoverEvent* event) {
+    hovered_ = true;
+    update();
+    QGraphicsObject::hoverEnterEvent(event);
+}
+
+void GraphNodeItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event) {
+    hovered_ = false;
+    update();
+    QGraphicsObject::hoverLeaveEvent(event);
+}
+
+void GraphNodeItem::mousePressEvent(QGraphicsSceneMouseEvent* event) {
+    setCursor(Qt::ClosedHandCursor);
+    QGraphicsObject::mousePressEvent(event);
+}
+
 void GraphNodeItem::mouseReleaseEvent(QGraphicsSceneMouseEvent* event) {
     QGraphicsObject::mouseReleaseEvent(event);
     setCursor(Qt::OpenHandCursor);
     MissionWorkspaceRuntime().MoveNode(node_.id, pos());
+}
+
+void GraphNodeItem::SetConnectionAnchor(bool is_anchor) {
+    if (connection_anchor_ == is_anchor) {
+        return;
+    }
+    connection_anchor_ = is_anchor;
+    update();
 }
 
 GraphEdgeItem::GraphEdgeItem(GraphEdge edge, GraphNodeItem* start_item, GraphNodeItem* end_item,
@@ -149,7 +200,7 @@ GraphEdgeItem::GraphEdgeItem(GraphEdge edge, GraphNodeItem* start_item, GraphNod
     setFlag(QGraphicsItem::ItemIsSelectable);
     setAcceptHoverEvents(true);
     setCursor(Qt::PointingHandCursor);
-    setPen(QPen(QColor(237, 91, 37), 3));
+    UpdatePen();
     setZValue(1.0);
 
     if (start_item_ != nullptr) {
@@ -170,6 +221,39 @@ void GraphEdgeItem::UpdatePosition() {
         return;
     }
     setLine(QLineF(start_item_->pos(), end_item_->pos()));
+}
+
+QVariant GraphEdgeItem::itemChange(GraphicsItemChange change, const QVariant& value) {
+    if (change == QGraphicsItem::ItemSelectedHasChanged) {
+        UpdatePen();
+    }
+    return QGraphicsLineItem::itemChange(change, value);
+}
+
+void GraphEdgeItem::hoverEnterEvent(QGraphicsSceneHoverEvent* event) {
+    hovered_ = true;
+    UpdatePen();
+    QGraphicsLineItem::hoverEnterEvent(event);
+}
+
+void GraphEdgeItem::hoverLeaveEvent(QGraphicsSceneHoverEvent* event) {
+    hovered_ = false;
+    UpdatePen();
+    QGraphicsLineItem::hoverLeaveEvent(event);
+}
+
+void GraphEdgeItem::UpdatePen() {
+    QPen pen;
+    if (isSelected()) {
+        pen = QPen(QColor(0, 196, 255), 4.5);
+    } else if (hovered_) {
+        pen = QPen(QColor(255, 214, 105), 4.0);
+    } else {
+        pen = QPen(QColor(237, 91, 37), 3.0);
+    }
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    setPen(pen);
 }
 
 GraphEditorView::GraphEditorView(QWidget* parent) : QGraphicsView(parent) {
@@ -227,12 +311,12 @@ void GraphEditorView::contextMenuEvent(QContextMenuEvent* event) {
 
         if (action == set_edge) {
             if (pending_edge_start_node_id_.isEmpty()) {
-                pending_edge_start_node_id_ = node_item->NodeId();
-                setCursor(Qt::CrossCursor);
+                StartPendingEdge(node_item);
             } else {
-                MissionWorkspaceRuntime().AddEdge(pending_edge_start_node_id_, node_item->NodeId());
-                pending_edge_start_node_id_.clear();
-                setCursor(Qt::ArrowCursor);
+                const QString start_node_id = pending_edge_start_node_id_;
+                const QString end_node_id = node_item->NodeId();
+                CancelPendingEdge();
+                MissionWorkspaceRuntime().AddEdge(start_node_id, end_node_id);
             }
             return;
         }
@@ -277,13 +361,16 @@ void GraphEditorView::contextMenuEvent(QContextMenuEvent* event) {
     }
 
     QMenu menu(this);
-    QAction* add_node = menu.addAction(tr("Add Node"));
+    QAction* add_node =
+        menu.addAction(QIcon(QStringLiteral(":/theme/icons/mission_add_node.svg")), tr("Add Node"));
     QAction* generate_grid =
         menu.addAction(QIcon(QStringLiteral(":/theme/icons/mission_grid.svg")), tr("Generate Grid"));
     menu.addSeparator();
-    QAction* undo_action = menu.addAction(tr("Undo"));
+    QAction* undo_action =
+        menu.addAction(QIcon(QStringLiteral(":/theme/icons/mission_undo.svg")), tr("Undo"));
     undo_action->setEnabled(MissionWorkspaceRuntime().CanUndo());
-    QAction* redo_action = menu.addAction(tr("Redo"));
+    QAction* redo_action =
+        menu.addAction(QIcon(QStringLiteral(":/theme/icons/mission_redo.svg")), tr("Redo"));
     redo_action->setEnabled(MissionWorkspaceRuntime().CanRedo());
 
     QAction* action = menu.exec(event->globalPos());
@@ -335,8 +422,10 @@ void GraphEditorView::keyReleaseEvent(QKeyEvent* event) {
 void GraphEditorView::mousePressEvent(QMouseEvent* event) {
     if (pending_edge_start_node_id_.isEmpty() == false && event->button() == Qt::LeftButton) {
         if (GraphNodeItem* target_node = NodeItemAt(event->pos())) {
-            MissionWorkspaceRuntime().AddEdge(pending_edge_start_node_id_, target_node->NodeId());
+            const QString start_node_id = pending_edge_start_node_id_;
+            const QString end_node_id = target_node->NodeId();
             CancelPendingEdge();
+            MissionWorkspaceRuntime().AddEdge(start_node_id, end_node_id);
             return;
         }
     }
@@ -354,6 +443,10 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
 }
 
 void GraphEditorView::mouseMoveEvent(QMouseEvent* event) {
+    if (!pending_edge_start_node_id_.isEmpty()) {
+        UpdatePendingEdgePreview(mapToScene(event->pos()));
+    }
+
     if (panning_) {
         const QPoint delta = event->pos() - last_pan_pos_;
         last_pan_pos_ = event->pos();
@@ -402,8 +495,13 @@ void GraphEditorView::RebuildScene() {
         return;
     }
 
+    pending_edge_preview_ = nullptr;
+    pending_edge_start_node_id_.clear();
     scene_->clear();
     node_items_.clear();
+    if (!space_pressed_ && !panning_) {
+        setCursor(Qt::ArrowCursor);
+    }
 
     if (!workspace_.background.IsValid()) {
         scene_->setSceneRect(QRectF(0, 0, 1000, 650));
@@ -435,11 +533,52 @@ void GraphEditorView::RebuildScene() {
     }
 }
 
+void GraphEditorView::StartPendingEdge(GraphNodeItem* start_item) {
+    if (start_item == nullptr || scene_ == nullptr) {
+        return;
+    }
+
+    CancelPendingEdge();
+    pending_edge_start_node_id_ = start_item->NodeId();
+    start_item->SetConnectionAnchor(true);
+    scene_->clearSelection();
+    start_item->setSelected(true);
+
+    pending_edge_preview_ = scene_->addLine(QLineF(start_item->pos(), start_item->pos()));
+    QPen preview_pen(QColor(0, 196, 255, 220), 2.4, Qt::DashLine);
+    preview_pen.setCapStyle(Qt::RoundCap);
+    pending_edge_preview_->setPen(preview_pen);
+    pending_edge_preview_->setZValue(1.7);
+    pending_edge_preview_->setAcceptedMouseButtons(Qt::NoButton);
+
+    setCursor(Qt::CrossCursor);
+}
+
 void GraphEditorView::CancelPendingEdge() {
+    if (GraphNodeItem* start_item = node_items_.value(pending_edge_start_node_id_, nullptr)) {
+        start_item->SetConnectionAnchor(false);
+    }
+    if (pending_edge_preview_ != nullptr && scene_ != nullptr) {
+        scene_->removeItem(pending_edge_preview_);
+        delete pending_edge_preview_;
+        pending_edge_preview_ = nullptr;
+    }
     pending_edge_start_node_id_.clear();
     if (!space_pressed_ && !panning_) {
         setCursor(Qt::ArrowCursor);
     }
+}
+
+void GraphEditorView::UpdatePendingEdgePreview(QPointF scene_pos) {
+    if (pending_edge_preview_ == nullptr) {
+        return;
+    }
+    GraphNodeItem* start_item = node_items_.value(pending_edge_start_node_id_, nullptr);
+    if (start_item == nullptr) {
+        CancelPendingEdge();
+        return;
+    }
+    pending_edge_preview_->setLine(QLineF(start_item->pos(), scene_pos));
 }
 
 void GraphEditorView::ShowGridDialog() {
