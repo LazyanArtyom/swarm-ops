@@ -6,11 +6,41 @@
 #include <QWebEngineSettings>
 #include <QWebEngineView>
 #include <QtMath>
+#include <algorithm>
 
 #include "app/mission/mission_workspace_service.h"
 #include "ui/theme/theme_metrics.h"
 
 namespace app::mission {
+
+namespace {
+
+constexpr int kMinimumCaptureWidthPx = 1600;
+constexpr int kMinimumCaptureHeightPx = 900;
+constexpr int kMaximumCaptureLongSidePx = 2600;
+
+QImage NormalizeEditorCapture(const QPixmap& screenshot) {
+    QImage image = screenshot.toImage();
+    if (image.isNull()) {
+        return {};
+    }
+
+    const QSize original_size = image.size();
+    const double minimum_scale =
+        std::max(static_cast<double>(kMinimumCaptureWidthPx) / original_size.width(),
+                 static_cast<double>(kMinimumCaptureHeightPx) / original_size.height());
+    const double maximum_scale =
+        static_cast<double>(kMaximumCaptureLongSidePx) /
+        static_cast<double>(std::max(original_size.width(), original_size.height()));
+    const double scale = std::max(1.0, std::min(minimum_scale, maximum_scale));
+    if (scale <= 1.0) {
+        return image;
+    }
+
+    return image.scaled(original_size * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+}
+
+}  // namespace
 
 MapSelectionBridge::MapSelectionBridge(QObject* parent) : QObject(parent) {}
 
@@ -69,7 +99,7 @@ void MapSelectionPage::CaptureWorkspace(const MapBounds& bounds, const QRect& ca
     }
 
     WorkspaceBackground background;
-    background.image = screenshot.toImage();
+    background.image = NormalizeEditorCapture(screenshot);
     background.bounds = bounds;
     MissionWorkspaceRuntime().CreateWorkspaceFromMapCapture(background);
 }

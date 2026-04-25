@@ -39,11 +39,17 @@
     <file>icons/mission_delete_node.svg</file>
     <file>icons/mission_drone.png</file>
     <file>icons/mission_edge.svg</file>
+    <file>icons/mission_fit.svg</file>
     <file>icons/mission_generic.png</file>
     <file>icons/mission_grid.svg</file>
+    <file>icons/mission_pan.svg</file>
     <file>icons/mission_redo.svg</file>
+    <file>icons/mission_select.svg</file>
     <file>icons/mission_target.svg</file>
     <file>icons/mission_undo.svg</file>
+    <file>icons/mission_upload_image.svg</file>
+    <file>icons/mission_zoomin.svg</file>
+    <file>icons/mission_zoomout.svg</file>
   </qresource>
 
 </RCC>

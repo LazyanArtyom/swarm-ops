@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <memory>
@@ -21,12 +22,16 @@ class MissionWorkspaceService final : public QObject {
     [[nodiscard]] MissionWorkspace ActiveWorkspace() const;
     [[nodiscard]] bool HasActiveWorkspace() const;
 
+    void CreateWorkspaceFromImage(const QImage& image);
     void CreateWorkspaceFromMapCapture(const WorkspaceBackground& background);
     void AddNode(QPointF position);
     void MoveNode(const QString& node_id, QPointF position);
+    void MoveNodes(const QHash<QString, QPointF>& node_positions);
     void RemoveNode(const QString& node_id);
+    void RemoveItems(const QList<QString>& node_ids, const QList<QString>& edge_ids);
     void AddEdge(const QString& from_node_id, const QString& to_node_id);
     void RemoveEdge(const QString& edge_id);
+    void SetNodeLabel(const QString& node_id, const QString& label);
     void SetNodeType(const QString& node_id, GraphNodeType type);
     void SetNodeCategory(const QString& node_id, GraphNodeCategory category);
     void GenerateGrid(int rows, int columns);
