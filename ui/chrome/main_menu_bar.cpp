@@ -13,6 +13,8 @@ MainMenuBar::MainMenuBar(actions::AppActions* app_actions, QWidget* parent) : QM
     setProperty("uiComponent", QStringLiteral("menu-chrome"));
 
     auto* file_menu = addMenu(tr("&File"));
+    file_menu->addAction(app_actions->NewAction());
+    file_menu->addSeparator();
     file_menu->addAction(app_actions->OpenAction());
     file_menu->addAction(app_actions->SaveAction());
     file_menu->addAction(app_actions->SaveAsAction());

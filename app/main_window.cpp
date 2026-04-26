@@ -9,6 +9,7 @@
 #include "app/controllers/app_command_controller.h"
 #include "app/controllers/navigation_controller.h"
 #include "app/controllers/workspace_controller.h"
+#include "app/mission/mission_workspace_service.h"
 #include "app/shell_layout_manager.h"
 #include "ui/actions/app_actions.h"
 #include "ui/chrome/main_menu_bar.h"
@@ -44,6 +45,8 @@ void MainWindow::SetupUi() {
     if (navigation_controller_ != nullptr && !shell_layout_manager_->HasRestoredPageSession()) {
         navigation_controller_->OpenHome();
     }
+    SyncDocumentSessionFromWorkspace();
+    RefreshWindowTitle();
 }
 
 void MainWindow::CreateChrome() {
@@ -95,6 +98,14 @@ void MainWindow::CreateControllers() {
     app_command_controller_ = new controllers::AppCommandController(command_targets, this);
     app_command_controller_->Wire();
 
+    connect(document_session_, &DocumentSession::SigDirtyChanged, this,
+            [this](bool) { RefreshWindowTitle(); });
+    connect(document_session_, &DocumentSession::SigFilePathChanged, this,
+            [this](const QString&) { RefreshWindowTitle(); });
+    connect(&mission::MissionWorkspaceRuntime(),
+            &mission::MissionWorkspaceService::SigDocumentStateChanged, this,
+            [this] { SyncDocumentSessionFromWorkspace(); });
+
     connect(&ui::theme::ThemeMetrics::Instance(), &ui::theme::ThemeMetrics::SigMetricsChanged, this,
             [this] { RefreshToolBarMetrics(); });
 }
@@ -107,9 +118,7 @@ void MainWindow::RefreshToolBarMetrics() {
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
-    const auto reply = ui::MessageDialog::Confirm(this, tr("Close App"),
-                                                  tr("Are you sure you want to close the app?"));
-    if (reply == QDialog::Rejected) {
+    if (!ConfirmDiscardUnsavedWorkspace()) {
         event->ignore();
         return;
     }
@@ -129,6 +138,37 @@ void MainWindow::showEvent(QShowEvent* event) {
     if (shell_layout_manager_ != nullptr) {
         shell_layout_manager_->AttachScreenTracking();
     }
+    RefreshWindowTitle();
+}
+
+void MainWindow::RefreshWindowTitle() {
+    const auto& workspace_service = mission::MissionWorkspaceRuntime();
+    const QString dirty_marker = workspace_service.IsDirty() ? QStringLiteral("*") : QString();
+    setWindowTitle(QStringLiteral("%1%2 - %3")
+                       .arg(workspace_service.WorkspaceDisplayName(), dirty_marker,
+                            context_.Services().Info().WindowTitle()));
+}
+
+void MainWindow::SyncDocumentSessionFromWorkspace() {
+    if (document_session_ == nullptr) {
+        return;
+    }
+
+    const auto& workspace_service = mission::MissionWorkspaceRuntime();
+    document_session_->SetCurrentFilePath(workspace_service.WorkspaceFilePath());
+    document_session_->SetDirty(workspace_service.IsDirty());
+    RefreshWindowTitle();
+}
+
+bool MainWindow::ConfirmDiscardUnsavedWorkspace() {
+    if (!mission::MissionWorkspaceRuntime().IsDirty()) {
+        return true;
+    }
+
+    const auto reply = ui::MessageDialog::Confirm(
+        this, tr("Unsaved Workspace"),
+        tr("The current workspace has unsaved changes. Close without saving?"));
+    return reply == QDialog::Accepted;
 }
 
 }  // namespace app

@@ -40,6 +40,10 @@ AppActions::AppActions(QObject* parent) : QObject(parent) {
     BindIcons();
 }
 
+QAction* AppActions::NewAction() const {
+    return new_action_;
+}
+
 QAction* AppActions::OpenAction() const {
     return open_action_;
 }
@@ -92,6 +96,10 @@ void AppActions::SetPanelVisibilityChecked(bool navigation_visible, bool info_vi
 }
 
 void AppActions::CreateActions() {
+    new_action_ = new QAction(tr("New"), this);
+    new_action_->setShortcut(QKeySequence::New);
+    new_action_->setIconVisibleInMenu(false);
+
     open_action_ = new QAction(tr("Open"), this);
     open_action_->setShortcut(QKeySequence::Open);
     open_action_->setIconVisibleInMenu(false);
@@ -127,11 +135,17 @@ void AppActions::CreateActions() {
 }
 
 void AppActions::ConfigureToolTips() {
-    SetActionHelp(open_action_, {.tool_tip = tr("Open file"), .status_tip = tr("Open a file")});
+    SetActionHelp(new_action_,
+                  {.tool_tip = tr("New workspace"),
+                   .status_tip = tr("Create a new untitled workspace")});
+    SetActionHelp(open_action_,
+                  {.tool_tip = tr("Open workspace"), .status_tip = tr("Open a workspace")});
     SetActionHelp(save_action_,
-                  {.tool_tip = tr("Save file"), .status_tip = tr("Save the current file")});
+                  {.tool_tip = tr("Save workspace"),
+                   .status_tip = tr("Save the current workspace")});
     SetActionHelp(save_as_action_, {.tool_tip = tr("Save as"),
-                                    .status_tip = tr("Save the current file with a new name")});
+                                    .status_tip =
+                                        tr("Save the current workspace with a new name")});
     SetActionHelp(settings_action_, {.tool_tip = tr("Open settings"),
                                      .status_tip = tr("Configure application settings")});
     SetActionHelp(exit_action_,

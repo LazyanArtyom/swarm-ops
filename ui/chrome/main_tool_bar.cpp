@@ -23,6 +23,7 @@ MainToolBar::MainToolBar(actions::AppActions* app_actions, QWidget* parent)
     setFloatable(false);
     setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
+    addAction(app_actions->NewAction());
     addAction(app_actions->OpenAction());
     addAction(app_actions->SaveAction());
 

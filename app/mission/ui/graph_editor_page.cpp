@@ -22,10 +22,13 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QScrollArea>
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QSignalBlocker>
+#include <QSizePolicy>
 #include <QSpinBox>
+#include <QSplitter>
 #include <QStackedWidget>
 #include <QTimer>
 #include <QToolBar>
@@ -363,9 +366,10 @@ GraphEditorView::GraphEditorView(QWidget* parent) : QGraphicsView(parent) {
     setFocusPolicy(Qt::StrongFocus);
     setFrameShape(QFrame::NoFrame);
     setAlignment(Qt::AlignCenter);
-    setBackgroundBrush(QColor(18, 20, 24));
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setProperty("uiComponent", QStringLiteral("graph-editor-canvas"));
+    setBackgroundBrush(Qt::NoBrush);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
 
     connect(scene_, &QGraphicsScene::selectionChanged, this, &GraphEditorView::HandleSelectionChanged);
 }
@@ -610,6 +614,26 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
             if (GraphEdgeItem* edge_item = EdgeItemAt(event->pos())) {
                 edge_item->setSelected(!edge_item->isSelected());
                 event->accept();
+                return;
+            }
+        }
+
+        if (tool_mode_ == GraphEditorToolMode::kSelect &&
+            !event->modifiers().testFlag(Qt::ShiftModifier)) {
+            if (GraphNodeItem* node_item = NodeItemAt(event->pos())) {
+                if (!node_item->isSelected()) {
+                    scene_->clearSelection();
+                    node_item->setSelected(true);
+                }
+                QGraphicsView::mousePressEvent(event);
+                return;
+            }
+            if (GraphEdgeItem* edge_item = EdgeItemAt(event->pos())) {
+                if (!edge_item->isSelected()) {
+                    scene_->clearSelection();
+                    edge_item->setSelected(true);
+                }
+                QGraphicsView::mousePressEvent(event);
                 return;
             }
         }
@@ -960,7 +984,8 @@ bool GraphEditorView::IsPanGesture(const QMouseEvent* event) const {
             (event->button() == Qt::LeftButton && space_pressed_));
 }
 
-GraphInspectorPanel::GraphInspectorPanel(QWidget* parent) : QWidget(parent) {
+GraphInspectorPanel::GraphInspectorPanel(QWidget* parent)
+    : ui::PanelWidget(tr("Inspector"), "graph_inspector_panel", parent) {
     BuildUi();
     RefreshUi();
 }
@@ -982,20 +1007,30 @@ void GraphInspectorPanel::SetSelection(const QList<QString>& node_ids, const QLi
 void GraphInspectorPanel::BuildUi() {
     const auto metrics = ui::theme::ThemeMetrics::Instance().Current();
 
-    setAttribute(Qt::WA_StyledBackground, true);
-    setProperty("uiComponent", QStringLiteral("panel-shell"));
+    auto* outer_layout = ContentLayout();
+    outer_layout->setContentsMargins(metrics.spacing_sm_px, metrics.spacing_sm_px,
+                                     metrics.spacing_sm_px, metrics.spacing_sm_px);
+    outer_layout->setSpacing(metrics.spacing_sm_px);
 
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px, metrics.spacing_md_px,
-                               metrics.spacing_md_px);
+    auto* scroll_area = new QScrollArea(ContentWidget());
+    scroll_area->setAttribute(Qt::WA_StyledBackground, true);
+    scroll_area->setProperty("uiComponent", QStringLiteral("panel-scroll-area"));
+    scroll_area->setWidgetResizable(true);
+    scroll_area->setFrameShape(QFrame::NoFrame);
+    outer_layout->addWidget(scroll_area);
+
+    content_host_ = new QWidget(scroll_area);
+    content_host_->setAttribute(Qt::WA_StyledBackground, true);
+    content_host_->setProperty("uiComponent", QStringLiteral("panel-content"));
+    auto* layout = new QVBoxLayout(content_host_);
+    layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
+                               metrics.spacing_md_px, metrics.spacing_md_px);
     layout->setSpacing(metrics.spacing_md_px);
 
-    auto* title = new QLabel(tr("Inspector"), this);
-    title->setProperty("uiComponent", QStringLiteral("panel-title"));
-    layout->addWidget(title);
-
-    stack_ = new QStackedWidget(this);
+    stack_ = new QStackedWidget(content_host_);
+    stack_->setProperty("uiComponent", QStringLiteral("graph-inspector-stack"));
     layout->addWidget(stack_, 1);
+    scroll_area->setWidget(content_host_);
 
     auto* summary_page = new QWidget(stack_);
     auto* summary_layout = new QVBoxLayout(summary_page);
@@ -1353,18 +1388,22 @@ GraphEditorPage::GraphEditorPage(QWidget* parent) : QWidget(parent) {
 
     layout->addWidget(tool_strip_);
 
-    auto* content_layout = new QHBoxLayout();
-    content_layout->setContentsMargins(0, 0, 0, 0);
-    content_layout->setSpacing(0);
-
     editor_ = new GraphEditorView(this);
     inspector_ = new GraphInspectorPanel(this);
     inspector_->setMinimumWidth(metrics.info_min_width_px);
-    inspector_->setMaximumWidth(metrics.info_width_px);
+    inspector_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
-    content_layout->addWidget(editor_, 1);
-    content_layout->addWidget(inspector_);
-    layout->addLayout(content_layout, 1);
+    content_splitter_ = new QSplitter(Qt::Horizontal, this);
+    content_splitter_->setChildrenCollapsible(false);
+    content_splitter_->setHandleWidth(1);
+    content_splitter_->setOpaqueResize(true);
+    content_splitter_->addWidget(editor_);
+    content_splitter_->addWidget(inspector_);
+    content_splitter_->setStretchFactor(0, 1);
+    content_splitter_->setStretchFactor(1, 0);
+    content_splitter_->setSizes({std::max(1, width() - metrics.info_width_px),
+                                 metrics.info_width_px});
+    layout->addWidget(content_splitter_, 1);
 
     connect(select_action_, &QAction::triggered, this,
             [this] { editor_->SetToolMode(GraphEditorToolMode::kSelect); });

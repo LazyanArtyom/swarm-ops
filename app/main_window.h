@@ -54,6 +54,9 @@ class MainWindow final : public QMainWindow {
     void CreateControllers();
 
     void RefreshToolBarMetrics();
+    void RefreshWindowTitle();
+    void SyncDocumentSessionFromWorkspace();
+    [[nodiscard]] bool ConfirmDiscardUnsavedWorkspace();
 
     AppContext& context_;
     ui::actions::AppActions* app_actions_{nullptr};

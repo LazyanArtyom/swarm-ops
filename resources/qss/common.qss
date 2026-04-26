@@ -127,6 +127,70 @@ QLabel#info_empty_message {
   color: ${FG_MUTED};
 }
 
+QGraphicsView[uiComponent="graph-editor-canvas"],
+QGraphicsView[uiComponent="graph-editor-canvas"] QScrollBar {
+  background: ${BG_WINDOW};
+  border: 0;
+}
+
+QWidget#graph_inspector_panel,
+QWidget#graph_inspector_panel QWidget[uiComponent="panel-content"],
+QWidget#graph_inspector_panel QWidget[uiComponent="panel-scroll-area"],
+QWidget#graph_inspector_panel QWidget[uiComponent="panel-scroll-area"] > QWidget,
+QWidget#graph_inspector_panel QStackedWidget[uiComponent="graph-inspector-stack"],
+QWidget#graph_inspector_panel QStackedWidget[uiComponent="graph-inspector-stack"] > QWidget,
+QWidget#graph_inspector_panel QLabel {
+  background: ${BG_SURFACE};
+  border: 0;
+}
+
+QWidget#graph_inspector_panel QLabel[role="muted"] {
+  color: ${FG_MUTED};
+}
+
+QWidget#graph_inspector_panel QLineEdit,
+QWidget#graph_inspector_panel QComboBox,
+QWidget#graph_inspector_panel QDoubleSpinBox {
+  background: ${BG_WINDOW};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  min-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
+  padding: 0 ${SPACE_SM}px;
+}
+
+QWidget#graph_inspector_panel QLineEdit:focus,
+QWidget#graph_inspector_panel QComboBox:focus,
+QWidget#graph_inspector_panel QDoubleSpinBox:focus {
+  border: 1px solid ${PRIMARY};
+}
+
+QWidget#graph_inspector_panel QComboBox::drop-down,
+QWidget#graph_inspector_panel QDoubleSpinBox::up-button,
+QWidget#graph_inspector_panel QDoubleSpinBox::down-button {
+  background: transparent;
+  border: 0;
+  border-left: 1px solid ${BORDER};
+  width: 24px;
+}
+
+QWidget#graph_inspector_panel QComboBox::down-arrow {
+  image: none;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid ${FG_MUTED};
+  height: 0;
+  width: 0;
+}
+
+QWidget#graph_inspector_panel QComboBox QAbstractItemView {
+  background: ${BG_ELEVATED};
+  border: 1px solid ${BORDER};
+  color: ${FG};
+  outline: 0;
+  selection-background-color: ${STATE_SELECTED};
+  selection-color: ${ON_PRIMARY};
+}
+
 QDialog#settings_dialog {
   background: ${BG_WINDOW};
 }

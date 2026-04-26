@@ -1,5 +1,11 @@
 #include "app/mission/mission_workspace_service.h"
 
+#include <QBuffer>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QUuid>
 #include <algorithm>
 
@@ -29,6 +35,179 @@ bool HasEdge(const MissionWorkspace& workspace, const QString& from_node_id, con
                        });
 }
 
+QString NodeTypeToString(GraphNodeType type) {
+    switch (type) {
+        case GraphNodeType::kBorder:
+            return QStringLiteral("border");
+        case GraphNodeType::kCorner:
+            return QStringLiteral("corner");
+    }
+    return QStringLiteral("border");
+}
+
+GraphNodeType NodeTypeFromString(const QString& value) {
+    if (value == QStringLiteral("corner")) {
+        return GraphNodeType::kCorner;
+    }
+    return GraphNodeType::kBorder;
+}
+
+QString NodeCategoryToString(GraphNodeCategory category) {
+    switch (category) {
+        case GraphNodeCategory::kGeneric:
+            return QStringLiteral("generic");
+        case GraphNodeCategory::kDrone:
+            return QStringLiteral("drone");
+        case GraphNodeCategory::kAttacker:
+            return QStringLiteral("attacker");
+        case GraphNodeCategory::kTarget:
+            return QStringLiteral("target");
+    }
+    return QStringLiteral("generic");
+}
+
+GraphNodeCategory NodeCategoryFromString(const QString& value) {
+    if (value == QStringLiteral("drone")) {
+        return GraphNodeCategory::kDrone;
+    }
+    if (value == QStringLiteral("attacker")) {
+        return GraphNodeCategory::kAttacker;
+    }
+    if (value == QStringLiteral("target")) {
+        return GraphNodeCategory::kTarget;
+    }
+    return GraphNodeCategory::kGeneric;
+}
+
+QString ImageToBase64Png(const QImage& image) {
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+    image.save(&buffer, "PNG");
+    return QString::fromLatin1(bytes.toBase64());
+}
+
+QImage ImageFromBase64Png(const QString& encoded) {
+    return QImage::fromData(QByteArray::fromBase64(encoded.toLatin1()), "PNG");
+}
+
+QJsonObject BoundsToJson(const MapBounds& bounds) {
+    return {
+        {QStringLiteral("north"), bounds.north},
+        {QStringLiteral("west"), bounds.west},
+        {QStringLiteral("south"), bounds.south},
+        {QStringLiteral("east"), bounds.east},
+    };
+}
+
+MapBounds BoundsFromJson(const QJsonObject& object) {
+    return {
+        .north = object.value(QStringLiteral("north")).toDouble(),
+        .west = object.value(QStringLiteral("west")).toDouble(),
+        .south = object.value(QStringLiteral("south")).toDouble(),
+        .east = object.value(QStringLiteral("east")).toDouble(),
+    };
+}
+
+QJsonObject WorkspaceToJson(const MissionWorkspace& workspace) {
+    QJsonArray nodes;
+    for (const GraphNode& node : workspace.nodes) {
+        nodes.push_back(QJsonObject{
+            {QStringLiteral("id"), node.id},
+            {QStringLiteral("label"), node.label},
+            {QStringLiteral("x"), node.position.x()},
+            {QStringLiteral("y"), node.position.y()},
+            {QStringLiteral("type"), NodeTypeToString(node.type)},
+            {QStringLiteral("category"), NodeCategoryToString(node.category)},
+        });
+    }
+
+    QJsonArray edges;
+    for (const GraphEdge& edge : workspace.edges) {
+        edges.push_back(QJsonObject{
+            {QStringLiteral("id"), edge.id},
+            {QStringLiteral("fromNodeId"), edge.from_node_id},
+            {QStringLiteral("toNodeId"), edge.to_node_id},
+        });
+    }
+
+    return {
+        {QStringLiteral("format"), QStringLiteral("swarmops.workspace")},
+        {QStringLiteral("version"), 1},
+        {QStringLiteral("workspace"),
+         QJsonObject{
+             {QStringLiteral("id"), workspace.id},
+             {QStringLiteral("name"), workspace.name},
+             {QStringLiteral("background"),
+              QJsonObject{
+                  {QStringLiteral("imagePngBase64"), ImageToBase64Png(workspace.background.image)},
+                  {QStringLiteral("bounds"), BoundsToJson(workspace.background.bounds)},
+              }},
+             {QStringLiteral("nodes"), nodes},
+             {QStringLiteral("edges"), edges},
+         }},
+    };
+}
+
+bool WorkspaceFromJson(const QJsonObject& root, MissionWorkspace* workspace, QString* error_message) {
+    if (workspace == nullptr) {
+        return false;
+    }
+    if (root.value(QStringLiteral("format")).toString() != QStringLiteral("swarmops.workspace")) {
+        if (error_message != nullptr) {
+            *error_message = QObject::tr("The selected file is not a SwarmOps workspace.");
+        }
+        return false;
+    }
+
+    const QJsonObject workspace_object = root.value(QStringLiteral("workspace")).toObject();
+    MissionWorkspace parsed;
+    parsed.id = workspace_object.value(QStringLiteral("id")).toString();
+    parsed.name = workspace_object.value(QStringLiteral("name")).toString();
+    if (parsed.id.isEmpty()) {
+        parsed.id = NewId();
+    }
+    if (parsed.name.isEmpty()) {
+        parsed.name = QObject::tr("Untitled");
+    }
+
+    const QJsonObject background_object = workspace_object.value(QStringLiteral("background")).toObject();
+    parsed.background.image =
+        ImageFromBase64Png(background_object.value(QStringLiteral("imagePngBase64")).toString());
+    parsed.background.bounds = BoundsFromJson(background_object.value(QStringLiteral("bounds")).toObject());
+
+    const QJsonArray nodes = workspace_object.value(QStringLiteral("nodes")).toArray();
+    for (const QJsonValue& value : nodes) {
+        const QJsonObject object = value.toObject();
+        GraphNode node;
+        node.id = object.value(QStringLiteral("id")).toString();
+        node.label = object.value(QStringLiteral("label")).toString();
+        node.position = QPointF(object.value(QStringLiteral("x")).toDouble(),
+                                object.value(QStringLiteral("y")).toDouble());
+        node.type = NodeTypeFromString(object.value(QStringLiteral("type")).toString());
+        node.category = NodeCategoryFromString(object.value(QStringLiteral("category")).toString());
+        if (!node.id.isEmpty()) {
+            parsed.nodes.push_back(node);
+        }
+    }
+
+    const QJsonArray edges = workspace_object.value(QStringLiteral("edges")).toArray();
+    for (const QJsonValue& value : edges) {
+        const QJsonObject object = value.toObject();
+        GraphEdge edge;
+        edge.id = object.value(QStringLiteral("id")).toString();
+        edge.from_node_id = object.value(QStringLiteral("fromNodeId")).toString();
+        edge.to_node_id = object.value(QStringLiteral("toNodeId")).toString();
+        if (!edge.id.isEmpty() && ContainsNode(parsed, edge.from_node_id) &&
+            ContainsNode(parsed, edge.to_node_id)) {
+            parsed.edges.push_back(edge);
+        }
+    }
+
+    *workspace = std::move(parsed);
+    return true;
+}
+
 }  // namespace
 
 MissionWorkspaceService::MissionWorkspaceService(std::unique_ptr<IMissionWorkspaceGateway> gateway,
@@ -46,6 +225,102 @@ MissionWorkspace MissionWorkspaceService::ActiveWorkspace() const {
 
 bool MissionWorkspaceService::HasActiveWorkspace() const {
     return !ActiveWorkspace().id.isEmpty();
+}
+
+QString MissionWorkspaceService::WorkspaceFilePath() const {
+    return workspace_file_path_;
+}
+
+QString MissionWorkspaceService::WorkspaceDisplayName() const {
+    if (!workspace_file_path_.isEmpty()) {
+        return QFileInfo(workspace_file_path_).completeBaseName();
+    }
+    return tr("Untitled");
+}
+
+bool MissionWorkspaceService::IsDirty() const {
+    return dirty_;
+}
+
+void MissionWorkspaceService::NewWorkspace() {
+    undo_stack_.clear();
+    redo_stack_.clear();
+    Restore(UntitledWorkspace());
+    SetDocumentState(QString(), false);
+}
+
+bool MissionWorkspaceService::LoadWorkspace(const QString& file_path, QString* error_message) {
+    QFile file(file_path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (error_message != nullptr) {
+            *error_message = tr("Could not open %1.").arg(QFileInfo(file_path).fileName());
+        }
+        return false;
+    }
+
+    QJsonParseError mutable_parse_error;
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &mutable_parse_error);
+    if (mutable_parse_error.error != QJsonParseError::NoError || !document.isObject()) {
+        if (error_message != nullptr) {
+            *error_message = tr("Could not read workspace file: %1.")
+                                 .arg(mutable_parse_error.errorString());
+        }
+        return false;
+    }
+
+    MissionWorkspace workspace;
+    if (!WorkspaceFromJson(document.object(), &workspace, error_message)) {
+        return false;
+    }
+
+    undo_stack_.clear();
+    redo_stack_.clear();
+    Restore(std::move(workspace));
+    SetDocumentState(file_path, false);
+    RequestGraphEditor();
+    return true;
+}
+
+bool MissionWorkspaceService::SaveWorkspace(QString* error_message) {
+    if (workspace_file_path_.isEmpty()) {
+        if (error_message != nullptr) {
+            *error_message = tr("Workspace does not have a save location.");
+        }
+        return false;
+    }
+    return SaveWorkspaceAs(workspace_file_path_, error_message);
+}
+
+bool MissionWorkspaceService::SaveWorkspaceAs(const QString& file_path, QString* error_message) {
+    MissionWorkspace workspace = ActiveWorkspace();
+    if (workspace.id.isEmpty()) {
+        workspace = UntitledWorkspace();
+    }
+    if (workspace.name.isEmpty() || workspace.name == tr("Untitled")) {
+        workspace.name = QFileInfo(file_path).completeBaseName();
+    }
+
+    QFile file(file_path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (error_message != nullptr) {
+            *error_message = tr("Could not save %1.").arg(QFileInfo(file_path).fileName());
+        }
+        return false;
+    }
+
+    const QByteArray payload =
+        QJsonDocument(WorkspaceToJson(workspace)).toJson(QJsonDocument::Indented);
+    if (file.write(payload) != payload.size()) {
+        if (error_message != nullptr) {
+            *error_message = tr("Could not write all workspace data to %1.")
+                                 .arg(QFileInfo(file_path).fileName());
+        }
+        return false;
+    }
+
+    Restore(workspace);
+    SetDocumentState(file_path, false);
+    return true;
 }
 
 void MissionWorkspaceService::CreateWorkspaceFromImage(const QImage& image) {
@@ -66,6 +341,7 @@ void MissionWorkspaceService::CreateWorkspaceFromMapCapture(const WorkspaceBackg
     (void)gateway_->CreateWorkspace(background);
     undo_stack_.clear();
     redo_stack_.clear();
+    MarkDirty();
     RequestGraphEditor();
 }
 
@@ -306,6 +582,7 @@ void MissionWorkspaceService::Undo() {
         redo_stack_.push_back(current);
     }
     Restore(std::move(previous));
+    MarkDirty();
 }
 
 void MissionWorkspaceService::Redo() {
@@ -319,6 +596,7 @@ void MissionWorkspaceService::Redo() {
         undo_stack_.push_back(current);
     }
     Restore(std::move(next));
+    MarkDirty();
 }
 
 bool MissionWorkspaceService::CanUndo() const {
@@ -333,6 +611,13 @@ QString MissionWorkspaceService::NextNodeLabel(const MissionWorkspace& workspace
     return QStringLiteral("N%1").arg(workspace.nodes.size() + 1);
 }
 
+MissionWorkspace MissionWorkspaceService::UntitledWorkspace() const {
+    MissionWorkspace workspace;
+    workspace.id = NewId();
+    workspace.name = tr("Untitled");
+    return workspace;
+}
+
 void MissionWorkspaceService::Commit(MissionWorkspace workspace) {
     if (gateway_ != nullptr) {
         MissionWorkspace current = ActiveWorkspace();
@@ -341,12 +626,29 @@ void MissionWorkspaceService::Commit(MissionWorkspace workspace) {
             redo_stack_.clear();
         }
         gateway_->ReplaceWorkspace(std::move(workspace));
+        MarkDirty();
     }
 }
 
 void MissionWorkspaceService::Restore(MissionWorkspace workspace) {
     if (gateway_ != nullptr) {
         gateway_->ReplaceWorkspace(std::move(workspace));
+    }
+}
+
+void MissionWorkspaceService::SetDocumentState(QString file_path, bool dirty) {
+    bool changed = workspace_file_path_ != file_path || dirty_ != dirty;
+    workspace_file_path_ = std::move(file_path);
+    dirty_ = dirty;
+    if (changed) {
+        emit SigDocumentStateChanged();
+    }
+}
+
+void MissionWorkspaceService::MarkDirty() {
+    if (!dirty_) {
+        dirty_ = true;
+        emit SigDocumentStateChanged();
     }
 }
 

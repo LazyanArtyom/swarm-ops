@@ -21,7 +21,14 @@ class MissionWorkspaceService final : public QObject {
 
     [[nodiscard]] MissionWorkspace ActiveWorkspace() const;
     [[nodiscard]] bool HasActiveWorkspace() const;
+    [[nodiscard]] QString WorkspaceFilePath() const;
+    [[nodiscard]] QString WorkspaceDisplayName() const;
+    [[nodiscard]] bool IsDirty() const;
 
+    void NewWorkspace();
+    bool LoadWorkspace(const QString& file_path, QString* error_message = nullptr);
+    bool SaveWorkspace(QString* error_message = nullptr);
+    bool SaveWorkspaceAs(const QString& file_path, QString* error_message = nullptr);
     void CreateWorkspaceFromImage(const QImage& image);
     void CreateWorkspaceFromMapCapture(const WorkspaceBackground& background);
     void AddNode(QPointF position);
@@ -44,15 +51,21 @@ class MissionWorkspaceService final : public QObject {
    signals:
     void SigWorkspaceChanged(const app::mission::MissionWorkspace& workspace);
     void SigGraphEditorRequested();
+    void SigDocumentStateChanged();
 
    private:
     [[nodiscard]] QString NextNodeLabel(const MissionWorkspace& workspace) const;
+    [[nodiscard]] MissionWorkspace UntitledWorkspace() const;
     void Commit(MissionWorkspace workspace);
     void Restore(MissionWorkspace workspace);
+    void SetDocumentState(QString file_path, bool dirty);
+    void MarkDirty();
 
     std::unique_ptr<IMissionWorkspaceGateway> gateway_;
     QList<MissionWorkspace> undo_stack_;
     QList<MissionWorkspace> redo_stack_;
+    QString workspace_file_path_;
+    bool dirty_{false};
 };
 
 MissionWorkspaceService& MissionWorkspaceRuntime();

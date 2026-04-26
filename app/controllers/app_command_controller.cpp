@@ -16,6 +16,7 @@
 #include "app/document_session.h"
 #include "app/commands/command_ids.h"
 #include "app/commands/command_registry.h"
+#include "app/mission/mission_workspace_service.h"
 #include "logging/logger.h"
 #include "ui/actions/app_actions.h"
 #include "ui/dialogs/about_dialog.h"
@@ -27,9 +28,47 @@ namespace app::controllers {
 namespace {
 
 constexpr auto kCommandLogCategory = "commands";
+constexpr auto kWorkspaceExtension = "swarmops";
 
 [[nodiscard]] QString ToQString(QLatin1StringView text) {
     return {text};
+}
+
+[[nodiscard]] QString WorkspaceFileFilter() {
+    return QObject::tr("SwarmOps Workspace (*.swarmops)");
+}
+
+[[nodiscard]] QString EnsureWorkspaceExtension(QString file_path) {
+    if (file_path.isEmpty() || !QFileInfo(file_path).suffix().isEmpty()) {
+        return file_path;
+    }
+    return QStringLiteral("%1.%2").arg(file_path, QString::fromLatin1(kWorkspaceExtension));
+}
+
+[[nodiscard]] QString SelectWorkspaceToOpen(QWidget* parent) {
+    QFileDialog dialog(parent, QObject::tr("Open Workspace"));
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilter(WorkspaceFileFilter());
+    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    return dialog.exec() == QDialog::Accepted ? dialog.selectedFiles().value(0) : QString();
+}
+
+[[nodiscard]] QString SelectWorkspaceSavePath(QWidget* parent, const QString& current_file_path) {
+    QFileDialog dialog(parent, QObject::tr("Save Workspace"));
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilter(WorkspaceFileFilter());
+    dialog.setDefaultSuffix(QString::fromLatin1(kWorkspaceExtension));
+    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    if (!current_file_path.isEmpty()) {
+        dialog.selectFile(current_file_path);
+    } else {
+        dialog.selectFile(QObject::tr("Untitled.swarmops"));
+    }
+    return dialog.exec() == QDialog::Accepted
+               ? EnsureWorkspaceExtension(dialog.selectedFiles().value(0))
+               : QString();
 }
 
 }  // namespace
@@ -52,9 +91,24 @@ void AppCommandController::RegisterCommands() {
     registered_commands_ = {
         std::make_shared<commands::LambdaCommand>(
             commands::CommandMetadata{
+                .command_id = ToQString(commands::command_ids::kNew),
+                .title = tr("New"),
+                .description = tr("Create a new workspace"),
+                .group_id = QStringLiteral("file"),
+                .shortcut = QKeySequence::New,
+                .placement =
+                    {
+                        .menu_id = QStringLiteral("file"),
+                        .section_id = QStringLiteral("file.io"),
+                        .show_in_toolbar = true,
+                    },
+            },
+            [this](const commands::CommandContext& context) { return NewWorkspace(context); }),
+        std::make_shared<commands::LambdaCommand>(
+            commands::CommandMetadata{
                 .command_id = ToQString(commands::command_ids::kOpen),
                 .title = tr("Open"),
-                .description = tr("Open a file"),
+                .description = tr("Open a workspace"),
                 .group_id = QStringLiteral("file"),
                 .shortcut = QKeySequence::Open,
                 .placement =
@@ -69,7 +123,7 @@ void AppCommandController::RegisterCommands() {
             commands::CommandMetadata{
                 .command_id = ToQString(commands::command_ids::kSave),
                 .title = tr("Save"),
-                .description = tr("Save the current file"),
+                .description = tr("Save the current workspace"),
                 .group_id = QStringLiteral("file"),
                 .shortcut = QKeySequence::Save,
                 .placement =
@@ -87,7 +141,7 @@ void AppCommandController::RegisterCommands() {
             commands::CommandMetadata{
                 .command_id = ToQString(commands::command_ids::kSaveAs),
                 .title = tr("Save As"),
-                .description = tr("Save the current file with a new name"),
+                .description = tr("Save the current workspace with a new name"),
                 .group_id = QStringLiteral("file"),
                 .shortcut = QKeySequence::SaveAs,
                 .placement =
@@ -113,6 +167,7 @@ void AppCommandController::WireActions() {
         return;
     }
 
+    BindActionToCommand(app_actions->NewAction(), ToQString(commands::command_ids::kNew));
     BindActionToCommand(app_actions->OpenAction(), ToQString(commands::command_ids::kOpen));
     BindActionToCommand(app_actions->SaveAction(), ToQString(commands::command_ids::kSave));
     BindActionToCommand(app_actions->SaveAsAction(), ToQString(commands::command_ids::kSaveAs));
@@ -163,6 +218,12 @@ void AppCommandController::WireActions() {
         connect(targets_.document_session, &app::DocumentSession::SigFilePathChanged, this,
                 [this](const QString&) { UpdateCommandActionStates(); });
     }
+
+    connect(&mission::MissionWorkspaceRuntime(),
+            &mission::MissionWorkspaceService::SigDocumentStateChanged, this, [this] {
+                SyncDocumentSessionFromWorkspace();
+                UpdateCommandActionStates();
+            });
 }
 
 void AppCommandController::BindActionToCommand(QAction* action, const QString& command_id) {
@@ -182,6 +243,8 @@ void AppCommandController::UpdateCommandActionStates() const {
 
     const commands::CommandContext command_context = MakeCommandContext();
     const auto& registry = targets_.services->Commands();
+    targets_.app_actions->NewAction()->setEnabled(
+        registry.IsCommandEnabled(ToQString(commands::command_ids::kNew), command_context));
     targets_.app_actions->OpenAction()->setEnabled(
         registry.IsCommandEnabled(ToQString(commands::command_ids::kOpen), command_context));
     targets_.app_actions->SaveAction()->setEnabled(
@@ -255,57 +318,106 @@ void AppCommandController::HandleCommandResult(const QString& command_id,
     }
 }
 
+commands::CommandExecution AppCommandController::NewWorkspace(
+    const commands::CommandContext& context) {
+    if (!ConfirmDiscardUnsaved(context)) {
+        return commands::CommandExecution::Completed(
+            commands::CommandResult::Cancelled(tr("New workspace cancelled.")));
+    }
+
+    mission::MissionWorkspaceRuntime().NewWorkspace();
+    SyncDocumentSessionFromWorkspace();
+    return commands::CommandExecution::Completed(
+        commands::CommandResult::Success(tr("Created untitled workspace.")));
+}
+
 commands::CommandExecution AppCommandController::OpenFile(const commands::CommandContext& context) {
-    const QString file_path = QFileDialog::getOpenFileName(context.window, tr("Open File"));
+    if (!ConfirmDiscardUnsaved(context)) {
+        return commands::CommandExecution::Completed(
+            commands::CommandResult::Cancelled(tr("Open cancelled.")));
+    }
+
+    const QString file_path = SelectWorkspaceToOpen(context.window);
     if (file_path.isEmpty()) {
         return commands::CommandExecution::Completed(
             commands::CommandResult::Cancelled(tr("Open cancelled.")));
     }
 
-    if (context.document_session != nullptr) {
-        context.document_session->SetCurrentFilePath(file_path);
-        context.document_session->SetDirty(false);
+    QString error_message;
+    if (!mission::MissionWorkspaceRuntime().LoadWorkspace(file_path, &error_message)) {
+        return commands::CommandExecution::Completed(
+            commands::CommandResult::Failed(error_message));
     }
 
+    SyncDocumentSessionFromWorkspace();
     return commands::CommandExecution::Completed(
         commands::CommandResult::Success(tr("Opened %1.").arg(QFileInfo(file_path).fileName())));
 }
 
 commands::CommandExecution AppCommandController::SaveFile(const commands::CommandContext& context) {
-    if (context.document_session == nullptr || !context.document_session->IsDirty()) {
+    auto& workspace_service = mission::MissionWorkspaceRuntime();
+    if (!workspace_service.IsDirty()) {
         return commands::CommandExecution::Completed(
             commands::CommandResult::Unavailable(tr("There are no changes to save.")));
     }
 
-    if (!context.document_session->HasFilePath()) {
+    if (workspace_service.WorkspaceFilePath().isEmpty()) {
         return SaveFileAs(context);
     }
 
-    const QString file_path = context.document_session->CurrentFilePath();
-    context.document_session->SetDirty(false);
+    QString error_message;
+    if (!workspace_service.SaveWorkspace(&error_message)) {
+        return commands::CommandExecution::Completed(
+            commands::CommandResult::Failed(error_message));
+    }
+
+    SyncDocumentSessionFromWorkspace();
     return commands::CommandExecution::Completed(
-        commands::CommandResult::Success(tr("Saved %1.").arg(QFileInfo(file_path).fileName())));
+        commands::CommandResult::Success(
+            tr("Saved %1.").arg(QFileInfo(workspace_service.WorkspaceFilePath()).fileName())));
 }
 
 commands::CommandExecution AppCommandController::SaveFileAs(
     const commands::CommandContext& context) {
-    const QString current_file_path =
-        context.document_session != nullptr ? context.document_session->CurrentFilePath()
-                                            : QString();
+    auto& workspace_service = mission::MissionWorkspaceRuntime();
     const QString file_path =
-        QFileDialog::getSaveFileName(context.window, tr("Save File As"), current_file_path);
+        SelectWorkspaceSavePath(context.window, workspace_service.WorkspaceFilePath());
     if (file_path.isEmpty()) {
         return commands::CommandExecution::Completed(
             commands::CommandResult::Cancelled(tr("Save cancelled.")));
     }
 
-    if (context.document_session != nullptr) {
-        context.document_session->SetCurrentFilePath(file_path);
-        context.document_session->SetDirty(false);
+    QString error_message;
+    if (!workspace_service.SaveWorkspaceAs(file_path, &error_message)) {
+        return commands::CommandExecution::Completed(
+            commands::CommandResult::Failed(error_message));
     }
 
+    SyncDocumentSessionFromWorkspace();
     return commands::CommandExecution::Completed(
         commands::CommandResult::Success(tr("Saved %1.").arg(QFileInfo(file_path).fileName())));
+}
+
+bool AppCommandController::ConfirmDiscardUnsaved(
+    const commands::CommandContext& context) const {
+    if (!mission::MissionWorkspaceRuntime().IsDirty()) {
+        return true;
+    }
+
+    const auto reply = ui::MessageDialog::Confirm(
+        context.window, tr("Unsaved Workspace"),
+        tr("The current workspace has unsaved changes. Continue without saving?"));
+    return reply == QDialog::Accepted;
+}
+
+void AppCommandController::SyncDocumentSessionFromWorkspace() const {
+    if (targets_.document_session == nullptr) {
+        return;
+    }
+
+    auto& workspace_service = mission::MissionWorkspaceRuntime();
+    targets_.document_session->SetCurrentFilePath(workspace_service.WorkspaceFilePath());
+    targets_.document_session->SetDirty(workspace_service.IsDirty());
 }
 
 }  // namespace app::controllers

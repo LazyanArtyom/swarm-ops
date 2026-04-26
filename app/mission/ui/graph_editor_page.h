@@ -10,6 +10,7 @@
 #include <QWidget>
 
 #include "app/mission/mission_workspace.h"
+#include "ui/panels/panel_widget.h"
 
 class QAction;
 class QActionGroup;
@@ -18,6 +19,7 @@ class QGraphicsLineItem;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
+class QSplitter;
 class QStackedWidget;
 class QToolBar;
 
@@ -146,7 +148,7 @@ class GraphEditorView final : public QGraphicsView {
     bool auto_fit_pending_{true};
 };
 
-class GraphInspectorPanel final : public QWidget {
+class GraphInspectorPanel final : public ui::PanelWidget {
     Q_OBJECT
 
    public:
@@ -177,6 +179,7 @@ class GraphInspectorPanel final : public QWidget {
     QList<QString> selected_node_ids_;
     QList<QString> selected_edge_ids_;
     QStackedWidget* stack_{nullptr};
+    QWidget* content_host_{nullptr};
     QLabel* workspace_name_value_{nullptr};
     QLabel* workspace_bounds_value_{nullptr};
     QLabel* workspace_graph_value_{nullptr};
@@ -207,6 +210,7 @@ class GraphEditorPage final : public QWidget {
     void RefreshToolbarState();
 
     QToolBar* tool_strip_{nullptr};
+    QSplitter* content_splitter_{nullptr};
     GraphEditorView* editor_{nullptr};
     GraphInspectorPanel* inspector_{nullptr};
     QActionGroup* mode_actions_{nullptr};
