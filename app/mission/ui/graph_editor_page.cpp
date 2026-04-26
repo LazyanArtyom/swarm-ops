@@ -92,6 +92,8 @@ QColor NodeColor(const GraphNode& node) {
     }
 
     switch (node.type) {
+        case GraphNodeType::kGeneric:
+            break;
         case GraphNodeType::kBorder:
             return QColor(251, 188, 5);
         case GraphNodeType::kCorner:
@@ -110,10 +112,12 @@ QString NodeIconPath(const GraphNode& node) {
         case GraphNodeCategory::kTarget:
             return QString::fromLatin1(icons::kTarget);
         case GraphNodeCategory::kGeneric:
-            return QString::fromLatin1(icons::kGeneric);
+            break;
     }
 
     switch (node.type) {
+        case GraphNodeType::kGeneric:
+            return QString::fromLatin1(icons::kGeneric);
         case GraphNodeType::kBorder:
             return QString::fromLatin1(icons::kBorder);
         case GraphNodeType::kCorner:
@@ -368,8 +372,8 @@ GraphEditorView::GraphEditorView(QWidget* parent) : QGraphicsView(parent) {
     setAlignment(Qt::AlignCenter);
     setProperty("uiComponent", QStringLiteral("graph-editor-canvas"));
     setBackgroundBrush(Qt::NoBrush);
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 
     connect(scene_, &QGraphicsScene::selectionChanged, this, &GraphEditorView::HandleSelectionChanged);
 }
@@ -408,8 +412,12 @@ void GraphEditorView::OpenGridDialog() {
 
 void GraphEditorView::FitToWorkspace() {
     if (scene_ != nullptr && !scene_->sceneRect().isEmpty()) {
+        if (!isVisible() || viewport()->size().width() <= 1 || viewport()->size().height() <= 1) {
+            auto_fit_pending_ = true;
+            return;
+        }
         resetTransform();
-        fitInView(scene_->sceneRect(), Qt::KeepAspectRatioByExpanding);
+        fitInView(scene_->sceneRect(), Qt::KeepAspectRatio);
         centerOn(scene_->sceneRect().center());
         auto_fit_pending_ = true;
         fitted_workspace_id_ = workspace_.id;
@@ -485,6 +493,7 @@ void GraphEditorView::contextMenuEvent(QContextMenuEvent* event) {
         }
         if (action == set_generic) {
             MissionWorkspaceRuntime().SetNodeCategory(node_item->NodeId(), GraphNodeCategory::kGeneric);
+            MissionWorkspaceRuntime().SetNodeType(node_item->NodeId(), GraphNodeType::kGeneric);
             return;
         }
         if (action == set_border) {
@@ -604,6 +613,22 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
     }
 
     if (event->button() == Qt::LeftButton) {
+        if (tool_mode_ == GraphEditorToolMode::kConnect ||
+            !pending_edge_start_node_id_.isEmpty()) {
+            if (GraphNodeItem* target_node = NodeItemAt(event->pos())) {
+                if (pending_edge_start_node_id_.isEmpty()) {
+                    StartPendingEdge(target_node);
+                } else {
+                    const QString start_node_id = pending_edge_start_node_id_;
+                    const QString end_node_id = target_node->NodeId();
+                    CancelPendingEdge();
+                    MissionWorkspaceRuntime().AddEdge(start_node_id, end_node_id);
+                }
+                event->accept();
+                return;
+            }
+        }
+
         if (tool_mode_ == GraphEditorToolMode::kSelect &&
             event->modifiers().testFlag(Qt::ShiftModifier)) {
             if (GraphNodeItem* node_item = NodeItemAt(event->pos())) {
@@ -642,21 +667,6 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
             EdgeItemAt(event->pos()) == nullptr) {
             MissionWorkspaceRuntime().AddNode(mapToScene(event->pos()));
             return;
-        }
-
-        if (tool_mode_ == GraphEditorToolMode::kConnect ||
-            pending_edge_start_node_id_.isEmpty() == false) {
-            if (GraphNodeItem* target_node = NodeItemAt(event->pos())) {
-                if (pending_edge_start_node_id_.isEmpty()) {
-                    StartPendingEdge(target_node);
-                } else {
-                    const QString start_node_id = pending_edge_start_node_id_;
-                    const QString end_node_id = target_node->NodeId();
-                    CancelPendingEdge();
-                    MissionWorkspaceRuntime().AddEdge(start_node_id, end_node_id);
-                }
-                return;
-            }
         }
     }
 
@@ -751,7 +761,7 @@ void GraphEditorView::RebuildScene() {
         scene_->addItem(item);
         node_items_.insert(node.id, item);
         connect(item, &GraphNodeItem::SigMoveFinished, this,
-                &GraphEditorView::CommitSelectedNodePositions);
+                [this](const QString&) { CommitSelectedNodePositions(); });
     }
 
     for (const GraphEdge& edge : workspace_.edges) {
@@ -1079,6 +1089,8 @@ void GraphInspectorPanel::BuildUi() {
 
     node_type_combo_ = new QComboBox(node_page);
     node_type_combo_->setProperty("settingsRole", QStringLiteral("field"));
+    node_type_combo_->addItem(NodeTypeText(GraphNodeType::kGeneric),
+                              static_cast<int>(GraphNodeType::kGeneric));
     node_type_combo_->addItem(NodeTypeText(GraphNodeType::kBorder), static_cast<int>(GraphNodeType::kBorder));
     node_type_combo_->addItem(NodeTypeText(GraphNodeType::kCorner), static_cast<int>(GraphNodeType::kCorner));
 
@@ -1313,6 +1325,8 @@ const GraphEdge* GraphInspectorPanel::SelectedEdge() const {
 
 QString GraphInspectorPanel::NodeTypeText(GraphNodeType type) {
     switch (type) {
+        case GraphNodeType::kGeneric:
+            return tr("Generic");
         case GraphNodeType::kBorder:
             return tr("Border");
         case GraphNodeType::kCorner:
@@ -1442,6 +1456,10 @@ GraphEditorPage::GraphEditorPage(QWidget* parent) : QWidget(parent) {
 
     connect(&MissionWorkspaceRuntime(), &MissionWorkspaceService::SigWorkspaceChanged, this,
             &GraphEditorPage::OnWorkspaceChanged);
+    connect(&MissionWorkspaceRuntime(), &MissionWorkspaceService::SigWorkspaceOperationRejected, this,
+            [this](const QString& message) {
+                QMessageBox::information(this, tr("Drone Allocation"), message);
+            });
 
     OnWorkspaceChanged(MissionWorkspaceRuntime().ActiveWorkspace());
 }

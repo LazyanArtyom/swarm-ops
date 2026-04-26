@@ -9,7 +9,10 @@
 #include <QUuid>
 #include <algorithm>
 
-#include "app/mission/in_memory_mission_workspace_gateway.h"
+#include "app/client_gateway/client_gateway.h"
+#include "app/client_gateway/client_mission_workspace_gateway.h"
+#include "app/client_gateway/drone_gateway_client.h"
+#include "app/client_gateway/mission_workspace_client.h"
 #include "app/mission/mission_workspace_gateway.h"
 
 namespace app::mission {
@@ -37,19 +40,24 @@ bool HasEdge(const MissionWorkspace& workspace, const QString& from_node_id, con
 
 QString NodeTypeToString(GraphNodeType type) {
     switch (type) {
+        case GraphNodeType::kGeneric:
+            return QStringLiteral("generic");
         case GraphNodeType::kBorder:
             return QStringLiteral("border");
         case GraphNodeType::kCorner:
             return QStringLiteral("corner");
     }
-    return QStringLiteral("border");
+    return QStringLiteral("generic");
 }
 
 GraphNodeType NodeTypeFromString(const QString& value) {
+    if (value == QStringLiteral("border")) {
+        return GraphNodeType::kBorder;
+    }
     if (value == QStringLiteral("corner")) {
         return GraphNodeType::kCorner;
     }
-    return GraphNodeType::kBorder;
+    return GraphNodeType::kGeneric;
 }
 
 QString NodeCategoryToString(GraphNodeCategory category) {
@@ -515,6 +523,14 @@ void MissionWorkspaceService::SetNodeCategory(const QString& node_id, GraphNodeC
                 return;
             }
             node.category = category;
+            if (category == GraphNodeCategory::kDrone) {
+                const auto validation =
+                    client_gateway::ClientGatewayRuntime().DroneGateway().ValidateDroneAllocation(workspace);
+                if (!validation.ok) {
+                    emit SigWorkspaceOperationRejected(validation.message);
+                    return;
+                }
+            }
             Commit(workspace);
             return;
         }
@@ -653,7 +669,9 @@ void MissionWorkspaceService::MarkDirty() {
 }
 
 MissionWorkspaceService& MissionWorkspaceRuntime() {
-    static auto* service = new MissionWorkspaceService(std::make_unique<InMemoryMissionWorkspaceGateway>());
+    static auto* service = new MissionWorkspaceService(
+        std::make_unique<ClientMissionWorkspaceGateway>(
+            &client_gateway::ClientGatewayRuntime().MissionWorkspaces()));
     return *service;
 }
 

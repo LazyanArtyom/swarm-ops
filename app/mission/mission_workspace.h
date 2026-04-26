@@ -8,6 +8,7 @@
 namespace app::mission {
 
 enum class GraphNodeType {
+    kGeneric,
     kBorder,
     kCorner,
 };
@@ -39,7 +40,7 @@ struct GraphNode final {
     QString id;
     QString label;
     QPointF position;
-    GraphNodeType type{GraphNodeType::kBorder};
+    GraphNodeType type{GraphNodeType::kGeneric};
     GraphNodeCategory category{GraphNodeCategory::kGeneric};
 };
 

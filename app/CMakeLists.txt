@@ -25,6 +25,24 @@ add_executable(${APP_TARGET}
     controllers/navigation_controller.cpp
     controllers/workspace_controller.h
     controllers/workspace_controller.cpp
+    client_gateway/client_gateway.h
+    client_gateway/client_gateway.cpp
+    client_gateway/client_gateway_types.h
+    client_gateway/drone_gateway_client.h
+    client_gateway/mission_workspace_client.h
+    client_gateway/swarm_runtime_client.h
+    client_gateway/client_mission_workspace_gateway.h
+    client_gateway/client_mission_workspace_gateway.cpp
+    client_gateway/simulated_client_gateway.h
+    client_gateway/simulated_client_gateway.cpp
+    client_gateway/simulated_mission_workspace_client.h
+    client_gateway/simulated_mission_workspace_client.cpp
+    client_gateway/simulated_drone_gateway_client.h
+    client_gateway/simulated_drone_gateway_client.cpp
+    client_gateway/simulated_swarm_runtime_client.h
+    client_gateway/simulated_swarm_runtime_client.cpp
+    client_gateway/api_gateway_client.h
+    client_gateway/api_gateway_client.cpp
     modules/app_module.h
     modules/app_module.cpp
     modules/mission_workspace_module.h
@@ -39,6 +57,8 @@ add_executable(${APP_TARGET}
     mission/ui/map_selection_page.cpp
     mission/ui/graph_editor_page.h
     mission/ui/graph_editor_page.cpp
+    mission/ui/simulation_page.h
+    mission/ui/simulation_page.cpp
     main.cpp
     main_window.h
     main_window.cpp
@@ -116,6 +136,7 @@ target_compile_definitions(${APP_TARGET}
         APP_VENDOR="${APP_VENDOR}"
         APP_VERSION="${APP_VERSION}"
         APP_RELEASE_DATE="${APP_RELEASE_DATE}"
+        SWARMOPS_CLIENT_GATEWAY_SIMULATOR=$<BOOL:${SWARMOPS_CLIENT_GATEWAY_SIMULATOR}>
 )
 
 set(APP_TARGET "${APP_TARGET}" PARENT_SCOPE)

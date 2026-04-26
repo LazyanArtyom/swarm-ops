@@ -34,6 +34,9 @@ set(QT_ROOT    "" CACHE PATH "Qt install prefix (Linux: .../gcc_64, Windows: ...
 set(QTIFW_ROOT "" CACHE PATH "Qt Installer Framework root (contains bin/binarycreator(.exe))")
 set(MINGW_ROOT "" CACHE PATH "MinGW root (Windows; contains bin/g++.exe etc.)")
 set(APP_DIST_DIR "${CMAKE_SOURCE_DIR}/dist" CACHE PATH "Directory for final packaged artifacts")
+option(SWARMOPS_CLIENT_GATEWAY_SIMULATOR
+       "Use the local client API Gateway simulator instead of the real gRPC adapter placeholder"
+       ON)
 
 # Make Qt discoverable
 if(QT_ROOT)

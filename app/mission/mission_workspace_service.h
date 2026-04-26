@@ -52,6 +52,7 @@ class MissionWorkspaceService final : public QObject {
     void SigWorkspaceChanged(const app::mission::MissionWorkspace& workspace);
     void SigGraphEditorRequested();
     void SigDocumentStateChanged();
+    void SigWorkspaceOperationRejected(const QString& message);
 
    private:
     [[nodiscard]] QString NextNodeLabel(const MissionWorkspace& workspace) const;
