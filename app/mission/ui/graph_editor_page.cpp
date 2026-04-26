@@ -22,6 +22,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointer>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QShowEvent>
@@ -38,6 +39,7 @@
 #include <utility>
 
 #include "app/mission/mission_workspace_service.h"
+#include "app/mission/ui/workspace_view_fit.h"
 #include "logging/logger.h"
 #include "ui/theme/theme_metrics.h"
 
@@ -398,12 +400,8 @@ void GraphEditorView::SetWorkspace(const MissionWorkspace& workspace) {
         workspace_.id != workspace.id ||
         workspace_.background.image.size() != workspace.background.image.size();
     workspace_ = workspace;
-    auto_fit_pending_ = auto_fit_pending_ || background_changed;
     if (background_changed) {
         fit_to_workspace_active_ = true;
-        fitted_workspace_id_.clear();
-        fitted_background_size_ = {};
-        fitted_viewport_size_ = {};
     }
     RebuildScene();
 }
@@ -432,47 +430,24 @@ void GraphEditorView::OpenGridDialog() {
 }
 
 void GraphEditorView::FitToWorkspace() {
-    if (scene_ != nullptr && !scene_->sceneRect().isEmpty()) {
-        fit_to_workspace_active_ = true;
-        if (!isVisible() || viewport()->size().width() <= 1 || viewport()->size().height() <= 1) {
-            auto_fit_pending_ = true;
-            return;
-        }
-
-        if (fit_in_progress_) {
-            return;
-        }
-        fit_in_progress_ = true;
-        const QSignalBlocker horizontal_blocker(horizontalScrollBar());
-        const QSignalBlocker vertical_blocker(verticalScrollBar());
-        const Qt::ScrollBarPolicy horizontal_policy = horizontalScrollBarPolicy();
-        const Qt::ScrollBarPolicy vertical_policy = verticalScrollBarPolicy();
-        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-
-        resetTransform();
-        fitInView(scene_->sceneRect(), Qt::KeepAspectRatioByExpanding);
-        centerOn(scene_->sceneRect().center());
-        setHorizontalScrollBarPolicy(horizontal_policy);
-        setVerticalScrollBarPolicy(vertical_policy);
-
-        auto_fit_pending_ = false;
-        fitted_workspace_id_ = workspace_.id;
-        fitted_background_size_ = workspace_.background.image.size();
-        fitted_viewport_size_ = viewport()->size();
-        fit_in_progress_ = false;
+    fit_to_workspace_active_ = true;
+    if (scene_ == nullptr || scene_->sceneRect().isEmpty() || !isVisible()) {
+        return;
     }
+    (void)view_fit::ApplyExactSceneFit(*this, *scene_);
 }
 
 void GraphEditorView::ZoomIn() {
-    auto_fit_pending_ = false;
     fit_to_workspace_active_ = false;
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     scale(1.2, 1.2);
 }
 
 void GraphEditorView::ZoomOut() {
-    auto_fit_pending_ = false;
     fit_to_workspace_active_ = false;
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     scale(1.0 / 1.2, 1.0 / 1.2);
 }
 
@@ -646,8 +621,9 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
 
     if (IsPanGesture(event)) {
         panning_ = true;
-        auto_fit_pending_ = false;
         fit_to_workspace_active_ = false;
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         last_pan_pos_ = event->pos();
         UpdateViewCursor();
         event->accept();
@@ -759,17 +735,15 @@ void GraphEditorView::wheelEvent(QWheelEvent* event) {
 
 void GraphEditorView::resizeEvent(QResizeEvent* event) {
     QGraphicsView::resizeEvent(event);
-    if (auto_fit_pending_ ||
-        (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
-        ScheduleFitToWorkspace();
+    if (fit_to_workspace_active_) {
+        FitToWorkspace();
     }
 }
 
 void GraphEditorView::showEvent(QShowEvent* event) {
     QGraphicsView::showEvent(event);
-    if (auto_fit_pending_ ||
-        (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
-        ScheduleFitToWorkspace();
+    if (fit_to_workspace_active_) {
+        FitToWorkspace();
     }
 }
 
@@ -790,16 +764,11 @@ void GraphEditorView::RebuildScene() {
 
     if (!workspace_.background.IsValid()) {
         scene_->setSceneRect(QRectF(0, 0, 1000, 650));
-        fitted_workspace_id_.clear();
-        fitted_background_size_ = {};
-        fitted_viewport_size_ = {};
         return;
     }
 
-    auto* background_item = scene_->addPixmap(QPixmap::fromImage(workspace_.background.image));
-    background_item->setTransformationMode(Qt::SmoothTransformation);
-    background_item->setZValue(0.0);
-    scene_->setSceneRect(QRectF(QPointF(0, 0), QSizeF(workspace_.background.image.size())));
+    [[maybe_unused]] auto* background_item =
+        view_fit::AddWorkspaceBackground(*scene_, workspace_.background.image);
 
     for (const GraphNode& node : workspace_.nodes) {
         auto* item = new GraphNodeItem(node);
@@ -823,32 +792,25 @@ void GraphEditorView::RebuildScene() {
 
     RestoreSelection();
 
-    if (auto_fit_pending_ &&
-        (fitted_workspace_id_ != workspace_.id ||
-         fitted_background_size_ != workspace_.background.image.size() ||
-         fitted_viewport_size_ != viewport()->size())) {
+    if (fit_to_workspace_active_) {
         ScheduleFitToWorkspace();
     }
 }
 
 void GraphEditorView::ScheduleFitToWorkspace() {
-    if (fit_scheduled_) {
-        return;
-    }
-    fit_scheduled_ = true;
-    QTimer::singleShot(0, this, [this] {
-        fit_scheduled_ = false;
-        if (auto_fit_pending_ ||
-            (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
-            FitToWorkspace();
-        }
-    });
-    QTimer::singleShot(60, this, [this] {
-        if (auto_fit_pending_ ||
-            (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
-            FitToWorkspace();
-        }
-    });
+    fit_to_workspace_active_ = true;
+
+    const auto schedule_fit = [this](int delay_ms) {
+        QTimer::singleShot(delay_ms, this, [guard = QPointer<GraphEditorView>(this)] {
+            if (guard != nullptr && guard->fit_to_workspace_active_) {
+                guard->FitToWorkspace();
+            }
+        });
+    };
+
+    schedule_fit(0);
+    schedule_fit(50);
+    schedule_fit(150);
 }
 
 void GraphEditorView::RestoreSelection() {
@@ -1533,6 +1495,7 @@ void GraphEditorPage::OnWorkspaceChanged(const MissionWorkspace& workspace) {
     }
     if (editor_ != nullptr) {
         editor_->SetWorkspace(workspace);
+        editor_->ScheduleFitToWorkspace();
     }
     if (inspector_ != nullptr) {
         inspector_->SetWorkspace(workspace);

@@ -6,7 +6,6 @@
 #include <QList>
 #include <QPoint>
 #include <QPointF>
-#include <QSize>
 #include <QWidget>
 
 #include "app/mission/mission_workspace.h"
@@ -98,6 +97,7 @@ class GraphEditorView final : public QGraphicsView {
     void SetToolMode(GraphEditorToolMode mode);
     [[nodiscard]] GraphEditorToolMode ToolMode() const;
     void FitToWorkspace();
+    void ScheduleFitToWorkspace();
     void ZoomIn();
     void ZoomOut();
     void OpenGridDialog();
@@ -121,7 +121,6 @@ class GraphEditorView final : public QGraphicsView {
     void HandleSelectionChanged();
     void RebuildScene();
     void RestoreSelection();
-    void ScheduleFitToWorkspace();
     void CommitSelectedNodePositions();
     void StartPendingEdge(GraphNodeItem* start_item);
     void CancelPendingEdge();
@@ -140,17 +139,11 @@ class GraphEditorView final : public QGraphicsView {
     QGraphicsLineItem* pending_edge_preview_{nullptr};
     QList<QString> selected_node_ids_;
     QList<QString> selected_edge_ids_;
-    QString fitted_workspace_id_;
-    QSize fitted_background_size_;
-    QSize fitted_viewport_size_;
     QPoint last_pan_pos_;
     GraphEditorToolMode tool_mode_{GraphEditorToolMode::kSelect};
     bool panning_{false};
     bool space_pressed_{false};
-    bool auto_fit_pending_{true};
     bool fit_to_workspace_active_{true};
-    bool fit_scheduled_{false};
-    bool fit_in_progress_{false};
 };
 
 class GraphInspectorPanel final : public ui::PanelWidget {

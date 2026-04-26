@@ -24,6 +24,7 @@ QImage NormalizeEditorCapture(const QPixmap& screenshot) {
     if (image.isNull()) {
         return {};
     }
+    image.setDevicePixelRatio(1.0);
 
     const QSize original_size = image.size();
     const double minimum_scale =
@@ -37,7 +38,9 @@ QImage NormalizeEditorCapture(const QPixmap& screenshot) {
         return image;
     }
 
-    return image.scaled(original_size * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QImage scaled = image.scaled(original_size * scale, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    scaled.setDevicePixelRatio(1.0);
+    return scaled;
 }
 
 }  // namespace

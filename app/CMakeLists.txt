@@ -63,6 +63,8 @@ add_executable(${APP_TARGET}
     mission/ui/mission_live_page.cpp
     mission/ui/workspace_browser_dialog.h
     mission/ui/workspace_browser_dialog.cpp
+    mission/ui/workspace_view_fit.h
+    mission/ui/workspace_view_fit.cpp
     main.cpp
     main_window.h
     main_window.cpp

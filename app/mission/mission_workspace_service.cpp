@@ -101,7 +101,19 @@ QString ImageToBase64Png(const QImage& image) {
 }
 
 QImage ImageFromBase64Png(const QString& encoded) {
-    return QImage::fromData(QByteArray::fromBase64(encoded.toLatin1()), "PNG");
+    QImage image = QImage::fromData(QByteArray::fromBase64(encoded.toLatin1()), "PNG");
+    image.setDevicePixelRatio(1.0);
+    return image;
+}
+
+QImage WorkspaceImage(QImage image) {
+    image.setDevicePixelRatio(1.0);
+    return image;
+}
+
+WorkspaceBackground WorkspaceBackgroundImage(WorkspaceBackground background) {
+    background.image = WorkspaceImage(std::move(background.image));
+    return background;
 }
 
 QJsonObject BoundsToJson(const MapBounds& bounds) {
@@ -467,7 +479,7 @@ void MissionWorkspaceService::CreateWorkspaceFromImage(const QImage& image) {
     }
 
     WorkspaceBackground background;
-    background.image = image;
+    background.image = WorkspaceImage(image);
     CreateWorkspaceFromMapCapture(background);
 }
 
@@ -476,7 +488,7 @@ void MissionWorkspaceService::CreateWorkspaceFromMapCapture(const WorkspaceBackg
         return;
     }
 
-    (void)gateway_->CreateWorkspace(background);
+    (void)gateway_->CreateWorkspace(WorkspaceBackgroundImage(background));
     undo_stack_.clear();
     redo_stack_.clear();
     MarkDirty();

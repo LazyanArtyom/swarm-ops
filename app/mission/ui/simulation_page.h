@@ -56,7 +56,7 @@ class SimulationView final : public QGraphicsView {
     QHash<QString, QGraphicsLineItem*> secondary_trajectory_items_;
     QHash<QString, int> secondary_trajectory_lanes_;
     QHash<QString, int> next_secondary_lane_by_edge_;
-    bool fit_pending_{true};
+    bool fit_to_workspace_active_{true};
 };
 
 class SimulationPage final : public QWidget {

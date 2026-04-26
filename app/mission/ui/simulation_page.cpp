@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPen>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QSlider>
@@ -21,6 +22,7 @@
 #include "app/client_gateway/client_gateway.h"
 #include "app/client_gateway/swarm_runtime_client.h"
 #include "app/mission/mission_workspace_service.h"
+#include "app/mission/ui/workspace_view_fit.h"
 #include "ui/theme/theme_icons.h"
 #include "ui/theme/theme_metrics.h"
 
@@ -122,6 +124,7 @@ SimulationView::SimulationView(QWidget* parent) : QGraphicsView(parent) {
 
 void SimulationView::SetWorkspace(const MissionWorkspace& workspace) {
     workspace_ = workspace;
+    fit_to_workspace_active_ = true;
     RebuildScene();
 }
 
@@ -147,26 +150,23 @@ void SimulationView::FitToWorkspace() {
     if (scene_ == nullptr || scene_->sceneRect().isEmpty()) {
         return;
     }
-    if (!isVisible() || viewport()->size().width() <= 1 || viewport()->size().height() <= 1) {
-        fit_pending_ = true;
+    fit_to_workspace_active_ = true;
+    if (!isVisible()) {
         return;
     }
-    resetTransform();
-    fitInView(scene_->sceneRect(), Qt::KeepAspectRatio);
-    centerOn(scene_->sceneRect().center());
-    fit_pending_ = false;
+    (void)view_fit::ApplyExactSceneFit(*this, *scene_);
 }
 
 void SimulationView::resizeEvent(QResizeEvent* event) {
     QGraphicsView::resizeEvent(event);
-    if (fit_pending_) {
+    if (fit_to_workspace_active_) {
         FitToWorkspace();
     }
 }
 
 void SimulationView::showEvent(QShowEvent* event) {
     QGraphicsView::showEvent(event);
-    if (fit_pending_) {
+    if (fit_to_workspace_active_) {
         FitToWorkspace();
     }
 }
@@ -183,33 +183,31 @@ void SimulationView::RebuildScene() {
 
     if (!workspace_.background.IsValid()) {
         scene_->setSceneRect(QRectF(0, 0, 1000, 650));
-        fit_pending_ = true;
         return;
     }
 
-    background_item_ = scene_->addPixmap(QPixmap::fromImage(workspace_.background.image));
-    background_item_->setTransformationMode(Qt::SmoothTransformation);
-    background_item_->setZValue(0.0);
-    scene_->setSceneRect(QRectF(QPointF(0, 0), QSizeF(workspace_.background.image.size())));
+    background_item_ = view_fit::AddWorkspaceBackground(*scene_, workspace_.background.image);
     for (const GraphNode& node : workspace_.nodes) {
         node_positions_.insert(node.id, node.position);
     }
     RenderWorkspaceDrones();
-    fit_pending_ = true;
     ScheduleFitToWorkspace();
 }
 
 void SimulationView::ScheduleFitToWorkspace() {
-    QTimer::singleShot(0, this, [this] {
-        if (fit_pending_) {
-            FitToWorkspace();
-        }
-    });
-    QTimer::singleShot(60, this, [this] {
-        if (fit_pending_) {
-            FitToWorkspace();
-        }
-    });
+    fit_to_workspace_active_ = true;
+
+    const auto schedule_fit = [this](int delay_ms) {
+        QTimer::singleShot(delay_ms, this, [guard = QPointer<SimulationView>(this)] {
+            if (guard != nullptr && guard->fit_to_workspace_active_) {
+                guard->FitToWorkspace();
+            }
+        });
+    };
+
+    schedule_fit(0);
+    schedule_fit(50);
+    schedule_fit(150);
 }
 
 void SimulationView::RenderWorkspaceDrones() {
@@ -242,6 +240,7 @@ void SimulationView::EnsureDroneItem(const client_gateway::SimulatedDronePositio
     auto* item = scene_->addPixmap(pixmap);
     item->setOffset(-pixmap.width() / 2.0, -pixmap.height() / 2.0);
     item->setPos(drone.position);
+    item->setFlag(QGraphicsItem::ItemIgnoresTransformations);
     item->setZValue(2.0);
     drone_items_.insert(drone.drone_id, item);
 }
