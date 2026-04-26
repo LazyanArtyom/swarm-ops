@@ -53,7 +53,6 @@ class AppCommandController final : public QObject {
     void HandleCommandResult(const QString& command_id,
                              const commands::CommandResult& result) const;
 
-    [[nodiscard]] commands::CommandExecution NewWorkspace(const commands::CommandContext& context);
     [[nodiscard]] commands::CommandExecution OpenFile(const commands::CommandContext& context);
     [[nodiscard]] commands::CommandExecution SaveFile(const commands::CommandContext& context);
     [[nodiscard]] commands::CommandExecution SaveFileAs(const commands::CommandContext& context);

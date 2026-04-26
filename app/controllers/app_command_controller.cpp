@@ -91,21 +91,6 @@ void AppCommandController::RegisterCommands() {
     registered_commands_ = {
         std::make_shared<commands::LambdaCommand>(
             commands::CommandMetadata{
-                .command_id = ToQString(commands::command_ids::kNew),
-                .title = tr("New"),
-                .description = tr("Create a new workspace"),
-                .group_id = QStringLiteral("file"),
-                .shortcut = QKeySequence::New,
-                .placement =
-                    {
-                        .menu_id = QStringLiteral("file"),
-                        .section_id = QStringLiteral("file.io"),
-                        .show_in_toolbar = true,
-                    },
-            },
-            [this](const commands::CommandContext& context) { return NewWorkspace(context); }),
-        std::make_shared<commands::LambdaCommand>(
-            commands::CommandMetadata{
                 .command_id = ToQString(commands::command_ids::kOpen),
                 .title = tr("Open"),
                 .description = tr("Open a workspace"),
@@ -167,7 +152,6 @@ void AppCommandController::WireActions() {
         return;
     }
 
-    BindActionToCommand(app_actions->NewAction(), ToQString(commands::command_ids::kNew));
     BindActionToCommand(app_actions->OpenAction(), ToQString(commands::command_ids::kOpen));
     BindActionToCommand(app_actions->SaveAction(), ToQString(commands::command_ids::kSave));
     BindActionToCommand(app_actions->SaveAsAction(), ToQString(commands::command_ids::kSaveAs));
@@ -243,8 +227,6 @@ void AppCommandController::UpdateCommandActionStates() const {
 
     const commands::CommandContext command_context = MakeCommandContext();
     const auto& registry = targets_.services->Commands();
-    targets_.app_actions->NewAction()->setEnabled(
-        registry.IsCommandEnabled(ToQString(commands::command_ids::kNew), command_context));
     targets_.app_actions->OpenAction()->setEnabled(
         registry.IsCommandEnabled(ToQString(commands::command_ids::kOpen), command_context));
     targets_.app_actions->SaveAction()->setEnabled(
@@ -316,19 +298,6 @@ void AppCommandController::HandleCommandResult(const QString& command_id,
             logging::Logger::ErrorFmtFor(kCommandLogCategory, "{}: {}", command_name, message);
             break;
     }
-}
-
-commands::CommandExecution AppCommandController::NewWorkspace(
-    const commands::CommandContext& context) {
-    if (!ConfirmDiscardUnsaved(context)) {
-        return commands::CommandExecution::Completed(
-            commands::CommandResult::Cancelled(tr("New workspace cancelled.")));
-    }
-
-    mission::MissionWorkspaceRuntime().NewWorkspace();
-    SyncDocumentSessionFromWorkspace();
-    return commands::CommandExecution::Completed(
-        commands::CommandResult::Success(tr("Created untitled workspace.")));
 }
 
 commands::CommandExecution AppCommandController::OpenFile(const commands::CommandContext& context) {

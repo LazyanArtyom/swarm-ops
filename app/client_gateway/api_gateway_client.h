@@ -63,7 +63,13 @@ class ApiGatewaySwarmRuntimeClient final : public ISwarmRuntimeClient {
     void PauseMissionSimulation() override;
     void ResumeMissionSimulation() override;
     void StopMissionSimulation() override;
+    void SetMissionSimulationSpeedMultiplier(double multiplier) override;
+    [[nodiscard]] double MissionSimulationSpeedMultiplier() const override;
     [[nodiscard]] MissionSimulationFrame LatestMissionSimulationFrame() const override;
+    [[nodiscard]] GatewayResult StartLiveMission(
+        const mission::MissionWorkspace& workspace) override;
+    void StopLiveMission() override;
+    [[nodiscard]] MissionSimulationFrame LatestLiveMissionFrame() const override;
 };
 
 class ApiGatewayClient final : public IClientGateway {

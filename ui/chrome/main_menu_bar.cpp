@@ -13,8 +13,6 @@ MainMenuBar::MainMenuBar(actions::AppActions* app_actions, QWidget* parent) : QM
     setProperty("uiComponent", QStringLiteral("menu-chrome"));
 
     auto* file_menu = addMenu(tr("&File"));
-    file_menu->addAction(app_actions->NewAction());
-    file_menu->addSeparator();
     file_menu->addAction(app_actions->OpenAction());
     file_menu->addAction(app_actions->SaveAction());
     file_menu->addAction(app_actions->SaveAsAction());
@@ -29,6 +27,10 @@ MainMenuBar::MainMenuBar(actions::AppActions* app_actions, QWidget* parent) : QM
     view_menu->addAction(app_actions->ToggleConsoleAction());
     view_menu->addSeparator();
     view_menu->addAction(app_actions->ResetLayoutAction());
+
+    auto* mission_menu = addMenu(tr("&Mission"));
+    mission_menu->addAction(app_actions->StartSimulationAction());
+    mission_menu->addAction(app_actions->StartMissionAction());
 
     auto* help_menu = addMenu(tr("&Help"));
     help_menu->addAction(app_actions->AboutAction());

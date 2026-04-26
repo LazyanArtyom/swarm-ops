@@ -378,6 +378,21 @@ GraphEditorView::GraphEditorView(QWidget* parent) : QGraphicsView(parent) {
     connect(scene_, &QGraphicsScene::selectionChanged, this, &GraphEditorView::HandleSelectionChanged);
 }
 
+GraphEditorView::~GraphEditorView() {
+    if (scene_ == nullptr) {
+        return;
+    }
+
+    disconnect(scene_, nullptr, this, nullptr);
+    scene_->blockSignals(true);
+    pending_edge_preview_ = nullptr;
+    node_items_.clear();
+    edge_items_.clear();
+    selected_node_ids_.clear();
+    selected_edge_ids_.clear();
+    scene_->clear();
+}
+
 void GraphEditorView::SetWorkspace(const MissionWorkspace& workspace) {
     const bool background_changed =
         workspace_.id != workspace.id ||
@@ -492,8 +507,8 @@ void GraphEditorView::contextMenuEvent(QContextMenuEvent* event) {
             return;
         }
         if (action == set_generic) {
-            MissionWorkspaceRuntime().SetNodeCategory(node_item->NodeId(), GraphNodeCategory::kGeneric);
-            MissionWorkspaceRuntime().SetNodeType(node_item->NodeId(), GraphNodeType::kGeneric);
+            MissionWorkspaceRuntime().SetNodeClassification(
+                node_item->NodeId(), GraphNodeType::kGeneric, GraphNodeCategory::kGeneric);
             return;
         }
         if (action == set_border) {

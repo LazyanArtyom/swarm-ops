@@ -15,9 +15,45 @@ constexpr double kBaseLatitudeDeg = 40.1792;
 constexpr double kBaseLongitudeDeg = 44.4991;
 constexpr double kPi = 3.14159265358979323846;
 constexpr int kMissionSimulationTickMs = 16;
+constexpr double kSimulationStepDistancePx = 25.0;
+constexpr double kMinSimulationSpeedMultiplier = 0.10;
+constexpr double kMaxSimulationSpeedMultiplier = 2.0;
+constexpr double kPointDistanceEpsilon = 0.000001;
+constexpr double kTrailSegmentMinLengthSquared = 0.01;
+constexpr int kSimulationGraphGuardMultiplier = 4;
+constexpr int kSimulatedTelemetryDroneCount = 6;
 
 QString NewId() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+QString SimulatedDroneId(int index) {
+    return QStringLiteral("sim-drone-%1").arg(index + 1);
+}
+
+double DistanceBetween(QPointF lhs, QPointF rhs) {
+    const QPointF delta = lhs - rhs;
+    return std::sqrt(delta.x() * delta.x() + delta.y() * delta.y());
+}
+
+QPointF PointOnSegment(QPointF from, QPointF to, double distance) {
+    const QPointF delta = to - from;
+    const double length = DistanceBetween(from, to);
+    if (length <= kPointDistanceEpsilon) {
+        return to;
+    }
+    const QPointF unit(delta.x() / length, delta.y() / length);
+    return QPointF(from.x() + distance * unit.x(), from.y() + distance * unit.y());
+}
+
+bool IsMeaningfulSegment(QPointF from, QPointF to) {
+    const QPointF delta = to - from;
+    return (delta.x() * delta.x() + delta.y() * delta.y()) > kTrailSegmentMinLengthSquared;
+}
+
+double AngleFrom(QPointF origin, QPointF point) {
+    const QPointF delta = point - origin;
+    return std::atan2(delta.y(), delta.x());
 }
 
 double WrapHeading(double degrees) {
@@ -58,6 +94,7 @@ void SimulatedSwarmRuntimeClient::Stop() {
     tick_timer_.stop();
     simulation_timer_.stop();
     simulation_state_ = MissionSimulationState::kIdle;
+    run_mode_ = RunMode::kNone;
     state_ = GatewayConnectionState::kDisconnected;
     emit SigConnectionChanged(state_);
 }
@@ -92,6 +129,7 @@ GatewayResult SimulatedSwarmRuntimeClient::StartMissionSimulation(
     const mission::MissionWorkspace& workspace) {
     const GatewayResult prepare_result = PrepareMissionSimulation(workspace);
     if (!prepare_result.ok) {
+        run_mode_ = RunMode::kSimulation;
         latest_simulation_frame_ = {
             .workspace_id = workspace.id,
             .state = MissionSimulationState::kRejected,
@@ -102,6 +140,7 @@ GatewayResult SimulatedSwarmRuntimeClient::StartMissionSimulation(
         return prepare_result;
     }
 
+    run_mode_ = RunMode::kSimulation;
     simulation_state_ = MissionSimulationState::kRunning;
     simulation_timer_.start();
     EmitSimulationFrame(tr("Mission simulation started."));
@@ -109,7 +148,8 @@ GatewayResult SimulatedSwarmRuntimeClient::StartMissionSimulation(
 }
 
 void SimulatedSwarmRuntimeClient::PauseMissionSimulation() {
-    if (simulation_state_ != MissionSimulationState::kRunning) {
+    if (run_mode_ != RunMode::kSimulation ||
+        simulation_state_ != MissionSimulationState::kRunning) {
         return;
     }
 
@@ -119,7 +159,8 @@ void SimulatedSwarmRuntimeClient::PauseMissionSimulation() {
 }
 
 void SimulatedSwarmRuntimeClient::ResumeMissionSimulation() {
-    if (simulation_state_ != MissionSimulationState::kPaused) {
+    if (run_mode_ != RunMode::kSimulation ||
+        simulation_state_ != MissionSimulationState::kPaused) {
         return;
     }
 
@@ -129,17 +170,64 @@ void SimulatedSwarmRuntimeClient::ResumeMissionSimulation() {
 }
 
 void SimulatedSwarmRuntimeClient::StopMissionSimulation() {
-    if (simulation_state_ == MissionSimulationState::kIdle) {
+    if (run_mode_ != RunMode::kSimulation || simulation_state_ == MissionSimulationState::kIdle) {
         return;
     }
 
     simulation_timer_.stop();
     simulation_state_ = MissionSimulationState::kIdle;
     EmitSimulationFrame(tr("Mission simulation stopped."));
+    run_mode_ = RunMode::kNone;
+}
+
+void SimulatedSwarmRuntimeClient::SetMissionSimulationSpeedMultiplier(double multiplier) {
+    simulation_speed_multiplier_ =
+        std::clamp(multiplier, kMinSimulationSpeedMultiplier, kMaxSimulationSpeedMultiplier);
+}
+
+double SimulatedSwarmRuntimeClient::MissionSimulationSpeedMultiplier() const {
+    return simulation_speed_multiplier_;
 }
 
 MissionSimulationFrame SimulatedSwarmRuntimeClient::LatestMissionSimulationFrame() const {
     return latest_simulation_frame_;
+}
+
+GatewayResult SimulatedSwarmRuntimeClient::StartLiveMission(
+    const mission::MissionWorkspace& workspace) {
+    const GatewayResult prepare_result = PrepareMissionSimulation(workspace);
+    if (!prepare_result.ok) {
+        run_mode_ = RunMode::kLiveMission;
+        latest_live_mission_frame_ = {
+            .workspace_id = workspace.id,
+            .state = MissionSimulationState::kRejected,
+            .message = prepare_result.message,
+            .frame_index = simulation_frame_index_,
+        };
+        emit SigLiveMissionFrame(latest_live_mission_frame_);
+        return prepare_result;
+    }
+
+    run_mode_ = RunMode::kLiveMission;
+    simulation_state_ = MissionSimulationState::kRunning;
+    simulation_timer_.start();
+    EmitSimulationFrame(tr("Live mission telemetry started."));
+    return GatewayResult::Success(tr("Live mission started."));
+}
+
+void SimulatedSwarmRuntimeClient::StopLiveMission() {
+    if (run_mode_ != RunMode::kLiveMission || simulation_state_ == MissionSimulationState::kIdle) {
+        return;
+    }
+
+    simulation_timer_.stop();
+    simulation_state_ = MissionSimulationState::kIdle;
+    EmitSimulationFrame(tr("Live mission stopped."));
+    run_mode_ = RunMode::kNone;
+}
+
+MissionSimulationFrame SimulatedSwarmRuntimeClient::LatestLiveMissionFrame() const {
+    return latest_live_mission_frame_;
 }
 
 void SimulatedSwarmRuntimeClient::Tick() {
@@ -156,22 +244,8 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
         return;
     }
 
-    const auto distance_between = [](QPointF lhs, QPointF rhs) {
-        const QPointF delta = lhs - rhs;
-        return std::sqrt(delta.x() * delta.x() + delta.y() * delta.y());
-    };
-    const auto point_on_segment = [](QPointF from, QPointF to, double distance) {
-        const QPointF delta = to - from;
-        const double length = std::sqrt(delta.x() * delta.x() + delta.y() * delta.y());
-        if (length <= 0.000001) {
-            return to;
-        }
-        const QPointF unit(delta.x() / length, delta.y() / length);
-        return QPointF(from.x() + distance * unit.x(), from.y() + distance * unit.y());
-    };
-
     for (qsizetype drone_index = 0; drone_index < drone_current_nodes_.size(); ++drone_index) {
-        double distance_remaining = simulation_step_distance_px_;
+        double distance_remaining = kSimulationStepDistancePx * simulation_speed_multiplier_;
         if (drone_landed_.value(drone_index)) {
             continue;
         }
@@ -185,7 +259,7 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
 
             const QPointF possible_position = simulation_nodes_[possible_index].position;
             const double current_distance =
-                distance_between(drone_positions_[drone_index], possible_position);
+                DistanceBetween(drone_positions_[drone_index], possible_position);
             if (distance_remaining >= current_distance) {
                 const QPointF segment_start = drone_positions_[drone_index];
                 distance_remaining -= current_distance;
@@ -202,7 +276,7 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
             } else {
                 const QPointF segment_start = drone_positions_[drone_index];
                 const QPointF segment_end =
-                    point_on_segment(segment_start, possible_position, distance_remaining);
+                    PointOnSegment(segment_start, possible_position, distance_remaining);
                 drone_positions_[drone_index] = segment_end;
                 AppendTrailSegment(static_cast<int>(drone_index), segment_start, segment_end);
                 break;
@@ -213,7 +287,9 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
     if (MissionSimulationCompleted()) {
         simulation_state_ = MissionSimulationState::kCompleted;
         simulation_timer_.stop();
-        EmitSimulationFrame(tr("Mission simulation completed."));
+        EmitSimulationFrame(run_mode_ == RunMode::kLiveMission ? tr("Live mission completed.")
+                                                                : tr("Mission simulation completed."));
+        run_mode_ = RunMode::kNone;
         return;
     }
 
@@ -225,8 +301,10 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
     simulation_timer_.stop();
     simulation_workspace_id_ = workspace.id;
     simulation_state_ = MissionSimulationState::kIdle;
+    run_mode_ = RunMode::kNone;
     simulation_frame_index_ = 0;
     latest_simulation_frame_ = {};
+    latest_live_mission_frame_ = {};
     simulation_nodes_.clear();
     simulation_node_index_.clear();
     drone_start_nodes_.clear();
@@ -264,6 +342,15 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
         }
         simulation_nodes_[from_index].neighbours.push_back(to_index);
         simulation_nodes_[to_index].neighbours.push_back(from_index);
+    }
+
+    for (SimulationNode& node : simulation_nodes_) {
+        const QPointF origin = node.position;
+        std::sort(node.neighbours.begin(), node.neighbours.end(),
+                  [this, origin](int lhs, int rhs) {
+                      return AngleFrom(origin, simulation_nodes_[lhs].position) <
+                             AngleFrom(origin, simulation_nodes_[rhs].position);
+                  });
     }
 
     int start_node_index = -1;
@@ -305,7 +392,8 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
 
     int node_index = CurrentNeighbourIndex(start_node_index);
     int guard = 0;
-    while (node_index != start_node_index && guard++ < simulation_nodes_.size() * 4) {
+    while (node_index != start_node_index &&
+           guard++ < simulation_nodes_.size() * kSimulationGraphGuardMultiplier) {
         SimulationNode& node = simulation_nodes_[node_index];
         for (int i = 0; i < node.neighbours.size(); ++i) {
             const int neighbour_index = node.neighbours[i];
@@ -334,7 +422,8 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
 
     for (SimulationNode& node : simulation_nodes_) {
         if (node.current_neighbour_index == -1 && !node.neighbours.isEmpty()) {
-            node.current_neighbour_index = 0;
+            node.current_neighbour_index =
+                static_cast<int>(qHash(node.id) % static_cast<uint>(node.neighbours.size()));
         }
     }
 
@@ -342,7 +431,7 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
     const int start_direction = simulation_nodes_[start_node_index].current_neighbour_index;
     QSet<QPair<int, int>> unique_steps;
     guard = 0;
-    while (guard++ < std::max<qsizetype>(1, neighbours_count * 4)) {
+    while (guard++ < std::max<qsizetype>(1, neighbours_count * kSimulationGraphGuardMultiplier)) {
         IncrementCurrentNeighbour(current_index);
         const int next_index = CurrentNeighbourIndex(current_index);
         if (next_index < 0) {
@@ -383,7 +472,7 @@ void SimulatedSwarmRuntimeClient::EmitSimulationFrame(QString message) {
     frame.state = simulation_state_;
     frame.message = std::move(message);
     frame.frame_index = simulation_frame_index_++;
-    frame.trail_segments = pending_trail_segments_;
+    frame.trail_segments = std::move(pending_trail_segments_);
     frame.drones.reserve(drone_positions_.size());
     for (qsizetype i = 0; i < drone_positions_.size(); ++i) {
         const int start_index = drone_start_nodes_.value(i, -1);
@@ -393,7 +482,7 @@ void SimulatedSwarmRuntimeClient::EmitSimulationFrame(QString message) {
             .node_id = start_index >= 0 && start_index < simulation_nodes_.size()
                            ? simulation_nodes_[start_index].id
                            : QString(),
-            .drone_id = QStringLiteral("sim-drone-%1").arg(i + 1),
+            .drone_id = SimulatedDroneId(static_cast<int>(i)),
             .from_node_id = from_index >= 0 && from_index < simulation_nodes_.size()
                                 ? simulation_nodes_[from_index].id
                                 : QString(),
@@ -405,7 +494,12 @@ void SimulatedSwarmRuntimeClient::EmitSimulationFrame(QString message) {
             .landed = drone_landed_.value(i),
         });
     }
-    pending_trail_segments_.clear();
+    if (run_mode_ == RunMode::kLiveMission) {
+        latest_live_mission_frame_ = frame;
+        emit SigLiveMissionFrame(latest_live_mission_frame_);
+        return;
+    }
+
     latest_simulation_frame_ = frame;
     emit SigMissionSimulationFrame(latest_simulation_frame_);
 }
@@ -482,15 +576,14 @@ void SimulatedSwarmRuntimeClient::AppendTrailSegment(int drone_index, QPointF st
         return;
     }
 
-    const QPointF delta = end_position - start_position;
-    if ((delta.x() * delta.x() + delta.y() * delta.y()) <= 0.01) {
+    if (!IsMeaningfulSegment(start_position, end_position)) {
         return;
     }
 
     const int from_index = drone_current_nodes_.value(drone_index, -1);
     const int to_index = drone_possible_nodes_.value(drone_index, -1);
     pending_trail_segments_.push_back({
-        .drone_id = QStringLiteral("sim-drone-%1").arg(drone_index + 1),
+        .drone_id = SimulatedDroneId(drone_index),
         .from_node_id = from_index >= 0 && from_index < simulation_nodes_.size()
                             ? simulation_nodes_[from_index].id
                             : QString(),
@@ -507,15 +600,15 @@ SwarmStateSnapshot SimulatedSwarmRuntimeClient::MakeSnapshot(double elapsed_seco
     SwarmStateSnapshot snapshot;
     snapshot.swarm_id = QStringLiteral("sim-swarm-1");
     snapshot.timestamp = QDateTime::currentDateTimeUtc();
-    snapshot.drones.reserve(6);
+    snapshot.drones.reserve(kSimulatedTelemetryDroneCount);
 
-    for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < kSimulatedTelemetryDroneCount; ++i) {
         const double lane = static_cast<double>(i);
         const double phase = elapsed_seconds * 0.18 + lane * (kPi / 3.0);
         const double ring_radius = 0.0022 + lane * 0.00008;
 
         DroneTelemetry telemetry;
-        telemetry.drone_id = QStringLiteral("sim-drone-%1").arg(i + 1);
+        telemetry.drone_id = SimulatedDroneId(i);
         telemetry.callsign = QStringLiteral("D%1").arg(i + 1);
         telemetry.latitude_deg = kBaseLatitudeDeg + std::sin(phase) * ring_radius;
         telemetry.longitude_deg = kBaseLongitudeDeg + std::cos(phase) * ring_radius;

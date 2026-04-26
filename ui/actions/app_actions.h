@@ -13,10 +13,11 @@ class AppActions final : public QObject {
     explicit AppActions(QObject* parent = nullptr);
     ~AppActions() override = default;
 
-    [[nodiscard]] QAction* NewAction() const;
     [[nodiscard]] QAction* OpenAction() const;
     [[nodiscard]] QAction* SaveAction() const;
     [[nodiscard]] QAction* SaveAsAction() const;
+    [[nodiscard]] QAction* StartSimulationAction() const;
+    [[nodiscard]] QAction* StartMissionAction() const;
     [[nodiscard]] QAction* SettingsAction() const;
     [[nodiscard]] QAction* ExitAction() const;
     [[nodiscard]] QAction* ToggleNavigationAction() const;
@@ -33,10 +34,11 @@ class AppActions final : public QObject {
     void BindIcons();
     void ConfigureToolTips();
 
-    QAction* new_action_{nullptr};
     QAction* open_action_{nullptr};
     QAction* save_action_{nullptr};
     QAction* save_as_action_{nullptr};
+    QAction* start_simulation_action_{nullptr};
+    QAction* start_mission_action_{nullptr};
     QAction* settings_action_{nullptr};
     QAction* exit_action_{nullptr};
     QAction* toggle_navigation_action_{nullptr};

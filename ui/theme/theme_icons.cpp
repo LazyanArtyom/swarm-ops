@@ -55,6 +55,14 @@ void ThemeIcons::BindAction(QAction* action, const QString& icon_base_name) {
         return;
     }
 
+    for (Entry& entry : entries_) {
+        if (entry.obj == action) {
+            entry.base_name = icon_base_name;
+            ApplyIcon(action, icon_base_name, ThemeManager::Instance().CurrentThemeId());
+            return;
+        }
+    }
+
     entries_.push_back(Entry{.obj = action, .base_name = icon_base_name});
 
     const ThemeId theme_id = ThemeManager::Instance().CurrentThemeId();

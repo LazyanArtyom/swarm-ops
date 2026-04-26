@@ -4,6 +4,7 @@
 
 #include "app/mission/ui/graph_editor_page.h"
 #include "app/mission/ui/map_selection_page.h"
+#include "app/mission/ui/mission_live_page.h"
 #include "app/mission/ui/simulation_page.h"
 #include "ui/ids.h"
 #include "ui/workspace/page_registry.h"
@@ -32,6 +33,14 @@ void MissionWorkspaceModule::RegisterPages(ui::workspace::PageRegistry& registry
         .title = QCoreApplication::translate("MissionWorkspaceModule", "Simulator"),
         .category = QCoreApplication::translate("MissionWorkspaceModule", "Mission"),
         .factory = [](QWidget* parent) { return new mission::SimulationPage(parent); },
+        .navigation_visible = true,
+    });
+
+    registry.RegisterPage({
+        .page_key = ui::ids::kPageMissionLive,
+        .title = QCoreApplication::translate("MissionWorkspaceModule", "Mission"),
+        .category = QCoreApplication::translate("MissionWorkspaceModule", "Mission"),
+        .factory = [](QWidget* parent) { return new mission::MissionLivePage(parent); },
         .navigation_visible = true,
     });
 }

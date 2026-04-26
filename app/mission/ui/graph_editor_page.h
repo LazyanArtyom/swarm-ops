@@ -92,6 +92,7 @@ class GraphEditorView final : public QGraphicsView {
 
    public:
     explicit GraphEditorView(QWidget* parent = nullptr);
+    ~GraphEditorView() override;
 
     void SetWorkspace(const MissionWorkspace& workspace);
     void SetToolMode(GraphEditorToolMode mode);

@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 #include <QUuid>
 #include <algorithm>
 
@@ -18,6 +19,9 @@
 namespace app::mission {
 
 namespace {
+
+constexpr double kGridMaxPaddingPx = 32.0;
+constexpr double kGridPaddingRatio = 0.08;
 
 QString NewId() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
@@ -426,20 +430,23 @@ void MissionWorkspaceService::RemoveItems(const QList<QString>& node_ids, const 
         return;
     }
 
+    const QSet<QString> node_id_set(node_ids.begin(), node_ids.end());
+    const QSet<QString> edge_id_set(edge_ids.begin(), edge_ids.end());
     MissionWorkspace workspace = ActiveWorkspace();
     const qsizetype node_count = workspace.nodes.size();
     const qsizetype edge_count = workspace.edges.size();
 
     workspace.nodes.erase(
         std::remove_if(workspace.nodes.begin(), workspace.nodes.end(),
-                       [&node_ids](const GraphNode& node) { return node_ids.contains(node.id); }),
+                       [&node_id_set](const GraphNode& node) { return node_id_set.contains(node.id); }),
         workspace.nodes.end());
 
     workspace.edges.erase(
         std::remove_if(workspace.edges.begin(), workspace.edges.end(),
-                       [&node_ids, &edge_ids](const GraphEdge& edge) {
-                           return edge_ids.contains(edge.id) || node_ids.contains(edge.from_node_id) ||
-                                  node_ids.contains(edge.to_node_id);
+                       [&node_id_set, &edge_id_set](const GraphEdge& edge) {
+                           return edge_id_set.contains(edge.id) ||
+                                  node_id_set.contains(edge.from_node_id) ||
+                                  node_id_set.contains(edge.to_node_id);
                        }),
         workspace.edges.end());
 
@@ -537,6 +544,32 @@ void MissionWorkspaceService::SetNodeCategory(const QString& node_id, GraphNodeC
     }
 }
 
+void MissionWorkspaceService::SetNodeClassification(const QString& node_id, GraphNodeType type,
+                                                    GraphNodeCategory category) {
+    MissionWorkspace workspace = ActiveWorkspace();
+    for (GraphNode& node : workspace.nodes) {
+        if (node.id != node_id) {
+            continue;
+        }
+        if (node.type == type && node.category == category) {
+            return;
+        }
+
+        node.type = type;
+        node.category = category;
+        if (category == GraphNodeCategory::kDrone) {
+            const auto validation =
+                client_gateway::ClientGatewayRuntime().DroneGateway().ValidateDroneAllocation(workspace);
+            if (!validation.ok) {
+                emit SigWorkspaceOperationRejected(validation.message);
+                return;
+            }
+        }
+        Commit(workspace);
+        return;
+    }
+}
+
 void MissionWorkspaceService::GenerateGrid(int rows, int columns) {
     MissionWorkspace workspace = ActiveWorkspace();
     if (workspace.id.isEmpty() || rows < 2 || columns < 2 || !workspace.background.IsValid()) {
@@ -547,8 +580,10 @@ void MissionWorkspaceService::GenerateGrid(int rows, int columns) {
     workspace.edges.clear();
 
     const QSize image_size = workspace.background.image.size();
-    const double horizontal_padding = std::min(32.0, image_size.width() * 0.08);
-    const double vertical_padding = std::min(32.0, image_size.height() * 0.08);
+    const double horizontal_padding =
+        std::min(kGridMaxPaddingPx, image_size.width() * kGridPaddingRatio);
+    const double vertical_padding =
+        std::min(kGridMaxPaddingPx, image_size.height() * kGridPaddingRatio);
     const double usable_width = std::max(1.0, image_size.width() - (horizontal_padding * 2.0));
     const double usable_height = std::max(1.0, image_size.height() - (vertical_padding * 2.0));
     const double x_step = usable_width / static_cast<double>(columns - 1);

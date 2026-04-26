@@ -40,10 +40,6 @@ AppActions::AppActions(QObject* parent) : QObject(parent) {
     BindIcons();
 }
 
-QAction* AppActions::NewAction() const {
-    return new_action_;
-}
-
 QAction* AppActions::OpenAction() const {
     return open_action_;
 }
@@ -54,6 +50,14 @@ QAction* AppActions::SaveAction() const {
 
 QAction* AppActions::SaveAsAction() const {
     return save_as_action_;
+}
+
+QAction* AppActions::StartSimulationAction() const {
+    return start_simulation_action_;
+}
+
+QAction* AppActions::StartMissionAction() const {
+    return start_mission_action_;
 }
 
 QAction* AppActions::SettingsAction() const {
@@ -96,10 +100,6 @@ void AppActions::SetPanelVisibilityChecked(bool navigation_visible, bool info_vi
 }
 
 void AppActions::CreateActions() {
-    new_action_ = new QAction(tr("New"), this);
-    new_action_->setShortcut(QKeySequence::New);
-    new_action_->setIconVisibleInMenu(false);
-
     open_action_ = new QAction(tr("Open"), this);
     open_action_->setShortcut(QKeySequence::Open);
     open_action_->setIconVisibleInMenu(false);
@@ -110,6 +110,10 @@ void AppActions::CreateActions() {
 
     save_as_action_ = new QAction(tr("Save As..."), this);
     save_as_action_->setShortcut(QKeySequence::SaveAs);
+
+    start_simulation_action_ = new QAction(tr("Start Simulation"), this);
+
+    start_mission_action_ = new QAction(tr("Start Mission"), this);
 
     settings_action_ = new QAction(tr("Settings..."), this);
     settings_action_->setShortcut(QKeySequence::Preferences);
@@ -135,9 +139,6 @@ void AppActions::CreateActions() {
 }
 
 void AppActions::ConfigureToolTips() {
-    SetActionHelp(new_action_,
-                  {.tool_tip = tr("New workspace"),
-                   .status_tip = tr("Create a new untitled workspace")});
     SetActionHelp(open_action_,
                   {.tool_tip = tr("Open workspace"), .status_tip = tr("Open a workspace")});
     SetActionHelp(save_action_,
@@ -146,6 +147,12 @@ void AppActions::ConfigureToolTips() {
     SetActionHelp(save_as_action_, {.tool_tip = tr("Save as"),
                                     .status_tip =
                                         tr("Save the current workspace with a new name")});
+    SetActionHelp(start_simulation_action_,
+                  {.tool_tip = tr("Start simulation"),
+                   .status_tip = tr("Run the expected offline mission simulation")});
+    SetActionHelp(start_mission_action_,
+                  {.tool_tip = tr("Start mission"),
+                   .status_tip = tr("Start the mission and open live telemetry")});
     SetActionHelp(settings_action_, {.tool_tip = tr("Open settings"),
                                      .status_tip = tr("Configure application settings")});
     SetActionHelp(exit_action_,
@@ -166,6 +173,10 @@ void AppActions::ConfigureToolTips() {
 void AppActions::BindIcons() {
     theme::ThemeIcons::Instance().BindAction(open_action_, QStringLiteral("open"));
     theme::ThemeIcons::Instance().BindAction(save_action_, QStringLiteral("save"));
+    theme::ThemeIcons::Instance().BindAction(start_simulation_action_,
+                                             QStringLiteral("mission_sim_start"));
+    theme::ThemeIcons::Instance().BindAction(start_mission_action_,
+                                             QStringLiteral("mission_sim_start"));
 }
 
 }  // namespace app::ui::actions

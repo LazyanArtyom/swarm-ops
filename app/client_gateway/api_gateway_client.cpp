@@ -127,7 +127,24 @@ void ApiGatewaySwarmRuntimeClient::ResumeMissionSimulation() {}
 
 void ApiGatewaySwarmRuntimeClient::StopMissionSimulation() {}
 
+void ApiGatewaySwarmRuntimeClient::SetMissionSimulationSpeedMultiplier(double /*multiplier*/) {}
+
+double ApiGatewaySwarmRuntimeClient::MissionSimulationSpeedMultiplier() const {
+    return 1.0;
+}
+
 MissionSimulationFrame ApiGatewaySwarmRuntimeClient::LatestMissionSimulationFrame() const {
+    return {};
+}
+
+GatewayResult ApiGatewaySwarmRuntimeClient::StartLiveMission(
+    const mission::MissionWorkspace& /*workspace*/) {
+    return NotImplemented();
+}
+
+void ApiGatewaySwarmRuntimeClient::StopLiveMission() {}
+
+MissionSimulationFrame ApiGatewaySwarmRuntimeClient::LatestLiveMissionFrame() const {
     return {};
 }
 

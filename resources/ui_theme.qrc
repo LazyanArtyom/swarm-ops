@@ -45,6 +45,12 @@
     <file>icons/mission_pan.svg</file>
     <file>icons/mission_redo.svg</file>
     <file>icons/mission_select.svg</file>
+    <file>icons/mission_sim_pause_dark.svg</file>
+    <file>icons/mission_sim_pause_light.svg</file>
+    <file>icons/mission_sim_start_dark.svg</file>
+    <file>icons/mission_sim_start_light.svg</file>
+    <file>icons/mission_sim_stop_dark.svg</file>
+    <file>icons/mission_sim_stop_light.svg</file>
     <file>icons/mission_target.svg</file>
     <file>icons/mission_undo.svg</file>
     <file>icons/mission_upload_image.svg</file>

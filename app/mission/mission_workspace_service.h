@@ -41,6 +41,8 @@ class MissionWorkspaceService final : public QObject {
     void SetNodeLabel(const QString& node_id, const QString& label);
     void SetNodeType(const QString& node_id, GraphNodeType type);
     void SetNodeCategory(const QString& node_id, GraphNodeCategory category);
+    void SetNodeClassification(const QString& node_id, GraphNodeType type,
+                               GraphNodeCategory category);
     void GenerateGrid(int rows, int columns);
     void Undo();
     void Redo();

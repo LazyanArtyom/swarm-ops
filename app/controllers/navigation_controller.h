@@ -10,6 +10,10 @@ class CentralPanel;
 class NavigationPanel;
 }  // namespace app::ui
 
+namespace app::ui::actions {
+class AppActions;
+}  // namespace app::ui::actions
+
 namespace app::controllers {
 
 class NavigationController final : public QObject {
@@ -17,7 +21,9 @@ class NavigationController final : public QObject {
 
    public:
     NavigationController(const AppServices& services, ui::NavigationPanel* navigation_panel,
-                         ui::CentralPanel* central_panel, QObject* parent = nullptr);
+                         ui::CentralPanel* central_panel,
+                         ui::actions::AppActions* app_actions,
+                         QObject* parent = nullptr);
     ~NavigationController() override = default;
 
     void RefreshNavigationItems();
@@ -25,6 +31,10 @@ class NavigationController final : public QObject {
 
    private:
     void WireNavigation();
+    void WireMissionActions(ui::actions::AppActions* app_actions);
+    void ShowAndSelectPage(const QString& page_key);
+    void StartSimulation();
+    void StartMission();
 
     app::AppServices services_;
     ui::NavigationPanel* navigation_panel_{nullptr};

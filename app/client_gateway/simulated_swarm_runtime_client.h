@@ -24,9 +24,21 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     void PauseMissionSimulation() override;
     void ResumeMissionSimulation() override;
     void StopMissionSimulation() override;
+    void SetMissionSimulationSpeedMultiplier(double multiplier) override;
+    [[nodiscard]] double MissionSimulationSpeedMultiplier() const override;
     [[nodiscard]] MissionSimulationFrame LatestMissionSimulationFrame() const override;
+    [[nodiscard]] GatewayResult StartLiveMission(
+        const mission::MissionWorkspace& workspace) override;
+    void StopLiveMission() override;
+    [[nodiscard]] MissionSimulationFrame LatestLiveMissionFrame() const override;
 
    private:
+    enum class RunMode {
+        kNone,
+        kSimulation,
+        kLiveMission,
+    };
+
     struct SimulationNode final {
         QString id;
         QPointF position;
@@ -55,6 +67,7 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     GatewayConnectionState state_{GatewayConnectionState::kDisconnected};
     SwarmStateSnapshot latest_;
     MissionSimulationFrame latest_simulation_frame_;
+    MissionSimulationFrame latest_live_mission_frame_;
     QList<SimulationNode> simulation_nodes_;
     QHash<QString, int> simulation_node_index_;
     QList<int> drone_start_nodes_;
@@ -69,8 +82,9 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     QString simulation_workspace_id_;
     QHash<QString, int> edge_visit_counts_;
     MissionSimulationState simulation_state_{MissionSimulationState::kIdle};
+    RunMode run_mode_{RunMode::kNone};
     int simulation_frame_index_{0};
-    double simulation_step_distance_px_{25.0};
+    double simulation_speed_multiplier_{0.45};
 };
 
 }  // namespace app::client_gateway

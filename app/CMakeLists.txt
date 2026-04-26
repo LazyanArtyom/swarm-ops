@@ -59,6 +59,8 @@ add_executable(${APP_TARGET}
     mission/ui/graph_editor_page.cpp
     mission/ui/simulation_page.h
     mission/ui/simulation_page.cpp
+    mission/ui/mission_live_page.h
+    mission/ui/mission_live_page.cpp
     main.cpp
     main_window.h
     main_window.cpp

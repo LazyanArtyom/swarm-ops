@@ -83,7 +83,7 @@ void MainWindow::CreateControllers() {
     const auto& widgets = shell_layout_manager_->Widgets();
 
     navigation_controller_ = new controllers::NavigationController(
-        context_.Services(), widgets.navigation_panel, widgets.central_panel, this);
+        context_.Services(), widgets.navigation_panel, widgets.central_panel, app_actions_, this);
     navigation_controller_->RefreshNavigationItems();
 
     const controllers::AppCommandController::Targets command_targets{

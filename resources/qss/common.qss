@@ -378,6 +378,42 @@ QToolBar[uiComponent="toolbar-chrome"] QToolButton:checked {
   background: ${STATE_PRESSED};
 }
 
+QToolBar[uiComponent="toolbar-chrome"] QLabel {
+  background: transparent;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QSlider {
+  background: transparent;
+  min-height: 22px;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QSlider::groove:horizontal {
+  background: ${BORDER};
+  border: 0;
+  border-radius: 2px;
+  height: 4px;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QSlider::sub-page:horizontal {
+  background: ${PRIMARY};
+  border-radius: 2px;
+  height: 4px;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QSlider::handle:horizontal {
+  background: ${FG};
+  border: 1px solid ${BORDER_STRONG};
+  border-radius: 6px;
+  height: 12px;
+  margin: -5px 0;
+  width: 12px;
+}
+
+QToolBar[uiComponent="toolbar-chrome"] QSlider::handle:horizontal:hover {
+  background: ${PRIMARY};
+  border: 1px solid ${PRIMARY};
+}
+
 QToolBar[uiComponent="toolbar-chrome"]::separator {
   background: ${BORDER};
   margin: ${SPACE_XS}px ${SPACE_SM}px;
