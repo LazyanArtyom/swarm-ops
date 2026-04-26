@@ -399,6 +399,12 @@ void GraphEditorView::SetWorkspace(const MissionWorkspace& workspace) {
         workspace_.background.image.size() != workspace.background.image.size();
     workspace_ = workspace;
     auto_fit_pending_ = auto_fit_pending_ || background_changed;
+    if (background_changed) {
+        fit_to_workspace_active_ = true;
+        fitted_workspace_id_.clear();
+        fitted_background_size_ = {};
+        fitted_viewport_size_ = {};
+    }
     RebuildScene();
 }
 
@@ -427,26 +433,46 @@ void GraphEditorView::OpenGridDialog() {
 
 void GraphEditorView::FitToWorkspace() {
     if (scene_ != nullptr && !scene_->sceneRect().isEmpty()) {
+        fit_to_workspace_active_ = true;
         if (!isVisible() || viewport()->size().width() <= 1 || viewport()->size().height() <= 1) {
             auto_fit_pending_ = true;
             return;
         }
+
+        if (fit_in_progress_) {
+            return;
+        }
+        fit_in_progress_ = true;
+        const QSignalBlocker horizontal_blocker(horizontalScrollBar());
+        const QSignalBlocker vertical_blocker(verticalScrollBar());
+        const Qt::ScrollBarPolicy horizontal_policy = horizontalScrollBarPolicy();
+        const Qt::ScrollBarPolicy vertical_policy = verticalScrollBarPolicy();
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
         resetTransform();
-        fitInView(scene_->sceneRect(), Qt::KeepAspectRatio);
+        fitInView(scene_->sceneRect(), Qt::KeepAspectRatioByExpanding);
         centerOn(scene_->sceneRect().center());
-        auto_fit_pending_ = true;
+        setHorizontalScrollBarPolicy(horizontal_policy);
+        setVerticalScrollBarPolicy(vertical_policy);
+
+        auto_fit_pending_ = false;
         fitted_workspace_id_ = workspace_.id;
         fitted_background_size_ = workspace_.background.image.size();
+        fitted_viewport_size_ = viewport()->size();
+        fit_in_progress_ = false;
     }
 }
 
 void GraphEditorView::ZoomIn() {
     auto_fit_pending_ = false;
+    fit_to_workspace_active_ = false;
     scale(1.2, 1.2);
 }
 
 void GraphEditorView::ZoomOut() {
     auto_fit_pending_ = false;
+    fit_to_workspace_active_ = false;
     scale(1.0 / 1.2, 1.0 / 1.2);
 }
 
@@ -621,6 +647,7 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
     if (IsPanGesture(event)) {
         panning_ = true;
         auto_fit_pending_ = false;
+        fit_to_workspace_active_ = false;
         last_pan_pos_ = event->pos();
         UpdateViewCursor();
         event->accept();
@@ -732,14 +759,16 @@ void GraphEditorView::wheelEvent(QWheelEvent* event) {
 
 void GraphEditorView::resizeEvent(QResizeEvent* event) {
     QGraphicsView::resizeEvent(event);
-    if (auto_fit_pending_) {
+    if (auto_fit_pending_ ||
+        (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
         ScheduleFitToWorkspace();
     }
 }
 
 void GraphEditorView::showEvent(QShowEvent* event) {
     QGraphicsView::showEvent(event);
-    if (auto_fit_pending_) {
+    if (auto_fit_pending_ ||
+        (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
         ScheduleFitToWorkspace();
     }
 }
@@ -763,6 +792,7 @@ void GraphEditorView::RebuildScene() {
         scene_->setSceneRect(QRectF(0, 0, 1000, 650));
         fitted_workspace_id_.clear();
         fitted_background_size_ = {};
+        fitted_viewport_size_ = {};
         return;
     }
 
@@ -795,19 +825,27 @@ void GraphEditorView::RebuildScene() {
 
     if (auto_fit_pending_ &&
         (fitted_workspace_id_ != workspace_.id ||
-         fitted_background_size_ != workspace_.background.image.size())) {
+         fitted_background_size_ != workspace_.background.image.size() ||
+         fitted_viewport_size_ != viewport()->size())) {
         ScheduleFitToWorkspace();
     }
 }
 
 void GraphEditorView::ScheduleFitToWorkspace() {
+    if (fit_scheduled_) {
+        return;
+    }
+    fit_scheduled_ = true;
     QTimer::singleShot(0, this, [this] {
-        if (auto_fit_pending_) {
+        fit_scheduled_ = false;
+        if (auto_fit_pending_ ||
+            (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
             FitToWorkspace();
         }
     });
     QTimer::singleShot(60, this, [this] {
-        if (auto_fit_pending_) {
+        if (auto_fit_pending_ ||
+            (fit_to_workspace_active_ && fitted_viewport_size_ != viewport()->size())) {
             FitToWorkspace();
         }
     });

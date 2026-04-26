@@ -6,6 +6,7 @@
 #include <QString>
 #include <memory>
 
+#include "app/client_gateway/client_gateway_types.h"
 #include "app/mission/mission_workspace.h"
 
 namespace app::mission {
@@ -24,11 +25,19 @@ class MissionWorkspaceService final : public QObject {
     [[nodiscard]] QString WorkspaceFilePath() const;
     [[nodiscard]] QString WorkspaceDisplayName() const;
     [[nodiscard]] bool IsDirty() const;
+    [[nodiscard]] bool NeedsSaveDialog() const;
+    [[nodiscard]] QList<client_gateway::WorkspaceListItem> AvailableWorkspaces() const;
 
     void NewWorkspace();
     bool LoadWorkspace(const QString& file_path, QString* error_message = nullptr);
+    bool OpenWorkspaceSession(const QString& workspace_id,
+                              QString user_display_name = {},
+                              QString* error_message = nullptr);
     bool SaveWorkspace(QString* error_message = nullptr);
+    bool SaveWorkspaceToGateway(QString name, bool shared, QString* error_message = nullptr);
     bool SaveWorkspaceAs(const QString& file_path, QString* error_message = nullptr);
+    client_gateway::WorkspaceShareInvite ShareActiveWorkspace(
+        QString* error_message = nullptr);
     void CreateWorkspaceFromImage(const QImage& image);
     void CreateWorkspaceFromMapCapture(const WorkspaceBackground& background);
     void AddNode(QPointF position);
@@ -55,6 +64,10 @@ class MissionWorkspaceService final : public QObject {
     void SigGraphEditorRequested();
     void SigDocumentStateChanged();
     void SigWorkspaceOperationRejected(const QString& message);
+    void SigWorkspaceListChanged(QList<app::client_gateway::WorkspaceListItem> workspaces);
+    void SigWorkspacePresenceChanged(
+        const QString& workspace_id,
+        QList<app::client_gateway::WorkspacePresenceUser> users);
 
    private:
     [[nodiscard]] QString NextNodeLabel(const MissionWorkspace& workspace) const;

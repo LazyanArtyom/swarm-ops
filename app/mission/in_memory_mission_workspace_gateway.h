@@ -13,7 +13,16 @@ class InMemoryMissionWorkspaceGateway final : public IMissionWorkspaceGateway {
     explicit InMemoryMissionWorkspaceGateway(QObject* parent = nullptr);
 
     [[nodiscard]] MissionWorkspace ActiveWorkspace() const override;
+    [[nodiscard]] QList<client_gateway::WorkspaceListItem> ListWorkspaces() const override;
     [[nodiscard]] QString CreateWorkspace(const WorkspaceBackground& background) override;
+    [[nodiscard]] bool OpenWorkspace(const QString& workspace_id, QString user_display_name,
+                                     QString* error_message = nullptr) override;
+    [[nodiscard]] bool SaveWorkspace(MissionWorkspace workspace,
+                                     QString* error_message = nullptr) override;
+    [[nodiscard]] bool SetWorkspaceShared(const QString& workspace_id, bool shared,
+                                          QString* error_message = nullptr) override;
+    [[nodiscard]] client_gateway::WorkspaceShareInvite CreateShareInvite(
+        const QString& workspace_id, QString* error_message = nullptr) override;
     void ReplaceWorkspace(MissionWorkspace workspace) override;
 
    private:

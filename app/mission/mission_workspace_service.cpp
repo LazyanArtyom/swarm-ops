@@ -9,6 +9,7 @@
 #include <QSet>
 #include <QUuid>
 #include <algorithm>
+#include <utility>
 
 #include "app/client_gateway/client_gateway.h"
 #include "app/client_gateway/client_mission_workspace_gateway.h"
@@ -228,6 +229,10 @@ MissionWorkspaceService::MissionWorkspaceService(std::unique_ptr<IMissionWorkspa
     if (gateway_ != nullptr) {
         connect(gateway_.get(), &IMissionWorkspaceGateway::SigWorkspaceChanged, this,
                 &MissionWorkspaceService::SigWorkspaceChanged);
+        connect(gateway_.get(), &IMissionWorkspaceGateway::SigWorkspaceListChanged, this,
+                &MissionWorkspaceService::SigWorkspaceListChanged);
+        connect(gateway_.get(), &IMissionWorkspaceGateway::SigWorkspacePresenceChanged, this,
+                &MissionWorkspaceService::SigWorkspacePresenceChanged);
     }
 }
 
@@ -244,6 +249,10 @@ QString MissionWorkspaceService::WorkspaceFilePath() const {
 }
 
 QString MissionWorkspaceService::WorkspaceDisplayName() const {
+    const MissionWorkspace workspace = ActiveWorkspace();
+    if (!workspace.name.trimmed().isEmpty()) {
+        return workspace.name.trimmed();
+    }
     if (!workspace_file_path_.isEmpty()) {
         return QFileInfo(workspace_file_path_).completeBaseName();
     }
@@ -252,6 +261,28 @@ QString MissionWorkspaceService::WorkspaceDisplayName() const {
 
 bool MissionWorkspaceService::IsDirty() const {
     return dirty_;
+}
+
+bool MissionWorkspaceService::NeedsSaveDialog() const {
+    const MissionWorkspace workspace = ActiveWorkspace();
+    if (workspace.id.isEmpty()) {
+        return true;
+    }
+
+    const QString name = workspace.name.trimmed();
+    if (name.isEmpty() || name == tr("Untitled")) {
+        return true;
+    }
+
+    const auto workspaces = AvailableWorkspaces();
+    return std::none_of(workspaces.begin(), workspaces.end(), [&workspace](const auto& item) {
+        return item.workspace_id == workspace.id;
+    });
+}
+
+QList<client_gateway::WorkspaceListItem> MissionWorkspaceService::AvailableWorkspaces() const {
+    return gateway_ != nullptr ? gateway_->ListWorkspaces()
+                               : QList<client_gateway::WorkspaceListItem>{};
 }
 
 void MissionWorkspaceService::NewWorkspace() {
@@ -293,14 +324,82 @@ bool MissionWorkspaceService::LoadWorkspace(const QString& file_path, QString* e
     return true;
 }
 
-bool MissionWorkspaceService::SaveWorkspace(QString* error_message) {
-    if (workspace_file_path_.isEmpty()) {
+bool MissionWorkspaceService::OpenWorkspaceSession(const QString& workspace_id,
+                                                   QString user_display_name,
+                                                   QString* error_message) {
+    if (gateway_ == nullptr || workspace_id.isEmpty()) {
         if (error_message != nullptr) {
-            *error_message = tr("Workspace does not have a save location.");
+            *error_message = tr("Select a workspace to open.");
         }
         return false;
     }
-    return SaveWorkspaceAs(workspace_file_path_, error_message);
+
+    if (!gateway_->OpenWorkspace(workspace_id, std::move(user_display_name), error_message)) {
+        return false;
+    }
+
+    undo_stack_.clear();
+    redo_stack_.clear();
+    SetDocumentState(QString(), false);
+    RequestGraphEditor();
+    return true;
+}
+
+bool MissionWorkspaceService::SaveWorkspace(QString* error_message) {
+    if (gateway_ == nullptr) {
+        if (error_message != nullptr) {
+            *error_message = tr("Workspace gateway is unavailable.");
+        }
+        return false;
+    }
+
+    MissionWorkspace workspace = ActiveWorkspace();
+    if (workspace.id.isEmpty()) {
+        if (error_message != nullptr) {
+            *error_message = tr("There is no workspace to save.");
+        }
+        return false;
+    }
+
+    if (!gateway_->SaveWorkspace(std::move(workspace), error_message)) {
+        return false;
+    }
+
+    SetDocumentState(QString(), false);
+    return true;
+}
+
+bool MissionWorkspaceService::SaveWorkspaceToGateway(QString name, bool shared,
+                                                     QString* error_message) {
+    if (gateway_ == nullptr) {
+        if (error_message != nullptr) {
+            *error_message = tr("Workspace gateway is unavailable.");
+        }
+        return false;
+    }
+
+    MissionWorkspace workspace = ActiveWorkspace();
+    if (workspace.id.isEmpty()) {
+        workspace = UntitledWorkspace();
+    }
+
+    const QString trimmed_name = name.trimmed();
+    if (!trimmed_name.isEmpty()) {
+        workspace.name = trimmed_name;
+    }
+    if (workspace.name.trimmed().isEmpty()) {
+        workspace.name = tr("Untitled");
+    }
+
+    if (!gateway_->SaveWorkspace(workspace, error_message)) {
+        return false;
+    }
+    if (!gateway_->SetWorkspaceShared(workspace.id, shared, error_message)) {
+        return false;
+    }
+
+    SetDocumentState(QString(), false);
+    return true;
 }
 
 bool MissionWorkspaceService::SaveWorkspaceAs(const QString& file_path, QString* error_message) {
@@ -333,6 +432,33 @@ bool MissionWorkspaceService::SaveWorkspaceAs(const QString& file_path, QString*
     Restore(workspace);
     SetDocumentState(file_path, false);
     return true;
+}
+
+client_gateway::WorkspaceShareInvite MissionWorkspaceService::ShareActiveWorkspace(
+    QString* error_message) {
+    client_gateway::WorkspaceShareInvite invite;
+    if (gateway_ == nullptr) {
+        if (error_message != nullptr) {
+            *error_message = tr("Workspace gateway is unavailable.");
+        }
+        return invite;
+    }
+
+    MissionWorkspace workspace = ActiveWorkspace();
+    if (workspace.id.isEmpty()) {
+        if (error_message != nullptr) {
+            *error_message = tr("There is no workspace to share.");
+        }
+        return invite;
+    }
+
+    if (dirty_ && !SaveWorkspace(error_message)) {
+        return invite;
+    }
+
+    invite = gateway_->CreateShareInvite(workspace.id, error_message);
+    emit SigDocumentStateChanged();
+    return invite;
 }
 
 void MissionWorkspaceService::CreateWorkspaceFromImage(const QImage& image) {

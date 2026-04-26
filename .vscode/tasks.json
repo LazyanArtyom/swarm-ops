@@ -246,7 +246,7 @@
         "command": "${workspaceFolder}/build/linux-debug/swarmops"
       },
       "osx": {
-        "command": "${workspaceFolder}/build/mac-debug/swarmops.app/Contents/MacOS/swarmops"
+        "command": "env OS_ACTIVITY_MODE=disable ${workspaceFolder}/build/mac-debug/swarmops.app/Contents/MacOS/swarmops"
       },
       "windows": {
         "command": "C:\\msys64\\msys2_shell.cmd",
@@ -278,7 +278,7 @@
         "command": "${workspaceFolder}/build/linux-release/swarmops"
       },
       "osx": {
-        "command": "${workspaceFolder}/build/mac-release/swarmops.app/Contents/MacOS/swarmops"
+        "command": "env OS_ACTIVITY_MODE=disable ${workspaceFolder}/build/mac-release/swarmops.app/Contents/MacOS/swarmops"
       },
       "windows": {
         "command": "C:\\msys64\\msys2_shell.cmd",

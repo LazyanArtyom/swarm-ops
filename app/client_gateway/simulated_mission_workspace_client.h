@@ -25,6 +25,10 @@ class SimulatedMissionWorkspaceClient final : public IMissionWorkspaceClient {
                                           const mission::WorkspaceBackground& background) override;
     [[nodiscard]] GatewayResult SaveWorkspaceSnapshot(mission::MissionWorkspace workspace) override;
     [[nodiscard]] GatewayResult DeleteWorkspace(const QString& workspace_id) override;
+    [[nodiscard]] GatewayResult SetWorkspaceShared(const QString& workspace_id,
+                                                   bool shared) override;
+    [[nodiscard]] WorkspaceShareInvite CreateWorkspaceInvite(
+        const QString& workspace_id) override;
 
     [[nodiscard]] GatewayResult JoinWorkspaceSession(const QString& workspace_id,
                                                      QString user_display_name) override;
@@ -43,10 +47,14 @@ class SimulatedMissionWorkspaceClient final : public IMissionWorkspaceClient {
         QDateTime updated_at;
         int revision{0};
         bool shared{true};
+        bool saved{false};
     };
 
     [[nodiscard]] WorkspaceListItem ToListItem(const StoredWorkspace& stored) const;
     [[nodiscard]] QList<WorkspacePresenceUser> PresenceFor(const QString& workspace_id) const;
+    [[nodiscard]] QString StoreFilePath() const;
+    [[nodiscard]] bool SaveStore(QString* error_message = nullptr) const;
+    void LoadStore();
     void EmitWorkspaceList();
     void EmitPresence(const QString& workspace_id);
     void EnsureConnected();
@@ -58,6 +66,7 @@ class SimulatedMissionWorkspaceClient final : public IMissionWorkspaceClient {
     GatewayConnectionState state_{GatewayConnectionState::kDisconnected};
     int next_workspace_number_{1};
     int next_revision_{1};
+    bool store_loaded_{false};
 };
 
 }  // namespace app::client_gateway

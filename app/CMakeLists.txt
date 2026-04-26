@@ -61,6 +61,8 @@ add_executable(${APP_TARGET}
     mission/ui/simulation_page.cpp
     mission/ui/mission_live_page.h
     mission/ui/mission_live_page.cpp
+    mission/ui/workspace_browser_dialog.h
+    mission/ui/workspace_browser_dialog.cpp
     main.cpp
     main_window.h
     main_window.cpp

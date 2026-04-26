@@ -142,11 +142,15 @@ class GraphEditorView final : public QGraphicsView {
     QList<QString> selected_edge_ids_;
     QString fitted_workspace_id_;
     QSize fitted_background_size_;
+    QSize fitted_viewport_size_;
     QPoint last_pan_pos_;
     GraphEditorToolMode tool_mode_{GraphEditorToolMode::kSelect};
     bool panning_{false};
     bool space_pressed_{false};
     bool auto_fit_pending_{true};
+    bool fit_to_workspace_active_{true};
+    bool fit_scheduled_{false};
+    bool fit_in_progress_{false};
 };
 
 class GraphInspectorPanel final : public ui::PanelWidget {

@@ -33,6 +33,12 @@
       "preLaunchTask": "build-project-debug",
       "stopAtEntry": false,
       "externalConsole": false,
+      "environment": [
+        {
+          "name": "OS_ACTIVITY_MODE",
+          "value": "disable"
+        }
+      ],
     },
     {
       "name": "Debug (Windows, MinGW GDB)",

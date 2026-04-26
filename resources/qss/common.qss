@@ -21,6 +21,14 @@ QWidget:disabled {
   color: ${FG_MUTED};
 }
 
+QLabel[status="info"] {
+  color: ${SUCCESS};
+}
+
+QLabel[status="error"] {
+  color: ${ERROR};
+}
+
 /* =========================================================
    Main Surfaces
    ========================================================= */

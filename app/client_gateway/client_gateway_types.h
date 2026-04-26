@@ -48,6 +48,13 @@ struct WorkspaceListItem final {
     int active_users{0};
 };
 
+struct WorkspaceShareInvite final {
+    QString workspace_id;
+    QString invite_code;
+    QString invite_url;
+    QDateTime expires_at;
+};
+
 struct WorkspacePresenceUser final {
     QString user_id;
     QString display_name;

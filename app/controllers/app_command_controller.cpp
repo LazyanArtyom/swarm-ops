@@ -2,8 +2,7 @@
 
 #include <QAction>
 #include <QApplication>
-#include <QFileDialog>
-#include <QFileInfo>
+#include <QDialog>
 #include <QKeySequence>
 #include <QLatin1StringView>
 #include <QMainWindow>
@@ -17,6 +16,7 @@
 #include "app/commands/command_ids.h"
 #include "app/commands/command_registry.h"
 #include "app/mission/mission_workspace_service.h"
+#include "app/mission/ui/workspace_browser_dialog.h"
 #include "logging/logger.h"
 #include "ui/actions/app_actions.h"
 #include "ui/dialogs/about_dialog.h"
@@ -28,47 +28,9 @@ namespace app::controllers {
 namespace {
 
 constexpr auto kCommandLogCategory = "commands";
-constexpr auto kWorkspaceExtension = "swarmops";
 
 [[nodiscard]] QString ToQString(QLatin1StringView text) {
     return {text};
-}
-
-[[nodiscard]] QString WorkspaceFileFilter() {
-    return QObject::tr("SwarmOps Workspace (*.swarmops)");
-}
-
-[[nodiscard]] QString EnsureWorkspaceExtension(QString file_path) {
-    if (file_path.isEmpty() || !QFileInfo(file_path).suffix().isEmpty()) {
-        return file_path;
-    }
-    return QStringLiteral("%1.%2").arg(file_path, QString::fromLatin1(kWorkspaceExtension));
-}
-
-[[nodiscard]] QString SelectWorkspaceToOpen(QWidget* parent) {
-    QFileDialog dialog(parent, QObject::tr("Open Workspace"));
-    dialog.setAcceptMode(QFileDialog::AcceptOpen);
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilter(WorkspaceFileFilter());
-    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
-    return dialog.exec() == QDialog::Accepted ? dialog.selectedFiles().value(0) : QString();
-}
-
-[[nodiscard]] QString SelectWorkspaceSavePath(QWidget* parent, const QString& current_file_path) {
-    QFileDialog dialog(parent, QObject::tr("Save Workspace"));
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilter(WorkspaceFileFilter());
-    dialog.setDefaultSuffix(QString::fromLatin1(kWorkspaceExtension));
-    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
-    if (!current_file_path.isEmpty()) {
-        dialog.selectFile(current_file_path);
-    } else {
-        dialog.selectFile(QObject::tr("Untitled.swarmops"));
-    }
-    return dialog.exec() == QDialog::Accepted
-               ? EnsureWorkspaceExtension(dialog.selectedFiles().value(0))
-               : QString();
 }
 
 }  // namespace
@@ -306,21 +268,16 @@ commands::CommandExecution AppCommandController::OpenFile(const commands::Comman
             commands::CommandResult::Cancelled(tr("Open cancelled.")));
     }
 
-    const QString file_path = SelectWorkspaceToOpen(context.window);
-    if (file_path.isEmpty()) {
+    mission::WorkspaceBrowserDialog dialog(mission::WorkspaceDialogMode::kOpen, context.window);
+    if (dialog.exec() != QDialog::Accepted && !dialog.PerformedOperation()) {
         return commands::CommandExecution::Completed(
             commands::CommandResult::Cancelled(tr("Open cancelled.")));
     }
 
-    QString error_message;
-    if (!mission::MissionWorkspaceRuntime().LoadWorkspace(file_path, &error_message)) {
-        return commands::CommandExecution::Completed(
-            commands::CommandResult::Failed(error_message));
-    }
-
     SyncDocumentSessionFromWorkspace();
-    return commands::CommandExecution::Completed(
-        commands::CommandResult::Success(tr("Opened %1.").arg(QFileInfo(file_path).fileName())));
+    const QString message = dialog.StatusMessage().isEmpty() ? tr("Workspace updated.")
+                                                             : dialog.StatusMessage();
+    return commands::CommandExecution::Completed(commands::CommandResult::Success(message));
 }
 
 commands::CommandExecution AppCommandController::SaveFile(const commands::CommandContext& context) {
@@ -330,7 +287,7 @@ commands::CommandExecution AppCommandController::SaveFile(const commands::Comman
             commands::CommandResult::Unavailable(tr("There are no changes to save.")));
     }
 
-    if (workspace_service.WorkspaceFilePath().isEmpty()) {
+    if (workspace_service.NeedsSaveDialog()) {
         return SaveFileAs(context);
     }
 
@@ -342,29 +299,22 @@ commands::CommandExecution AppCommandController::SaveFile(const commands::Comman
 
     SyncDocumentSessionFromWorkspace();
     return commands::CommandExecution::Completed(
-        commands::CommandResult::Success(
-            tr("Saved %1.").arg(QFileInfo(workspace_service.WorkspaceFilePath()).fileName())));
+        commands::CommandResult::Success(tr("Saved %1.")
+                                             .arg(workspace_service.WorkspaceDisplayName())));
 }
 
 commands::CommandExecution AppCommandController::SaveFileAs(
     const commands::CommandContext& context) {
-    auto& workspace_service = mission::MissionWorkspaceRuntime();
-    const QString file_path =
-        SelectWorkspaceSavePath(context.window, workspace_service.WorkspaceFilePath());
-    if (file_path.isEmpty()) {
+    mission::WorkspaceBrowserDialog dialog(mission::WorkspaceDialogMode::kSave, context.window);
+    if (dialog.exec() != QDialog::Accepted && !dialog.PerformedOperation()) {
         return commands::CommandExecution::Completed(
             commands::CommandResult::Cancelled(tr("Save cancelled.")));
     }
 
-    QString error_message;
-    if (!workspace_service.SaveWorkspaceAs(file_path, &error_message)) {
-        return commands::CommandExecution::Completed(
-            commands::CommandResult::Failed(error_message));
-    }
-
     SyncDocumentSessionFromWorkspace();
-    return commands::CommandExecution::Completed(
-        commands::CommandResult::Success(tr("Saved %1.").arg(QFileInfo(file_path).fileName())));
+    const QString message = dialog.StatusMessage().isEmpty() ? tr("Workspace saved.")
+                                                             : dialog.StatusMessage();
+    return commands::CommandExecution::Completed(commands::CommandResult::Success(message));
 }
 
 bool AppCommandController::ConfirmDiscardUnsaved(

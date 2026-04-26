@@ -51,6 +51,16 @@ GatewayResult ApiGatewayMissionWorkspaceClient::DeleteWorkspace(
     return NotImplemented();
 }
 
+GatewayResult ApiGatewayMissionWorkspaceClient::SetWorkspaceShared(
+    const QString& /*workspace_id*/, bool /*shared*/) {
+    return NotImplemented();
+}
+
+WorkspaceShareInvite ApiGatewayMissionWorkspaceClient::CreateWorkspaceInvite(
+    const QString& /*workspace_id*/) {
+    return {};
+}
+
 GatewayResult ApiGatewayMissionWorkspaceClient::JoinWorkspaceSession(
     const QString& /*workspace_id*/, QString /*user_display_name*/) {
     return NotImplemented();

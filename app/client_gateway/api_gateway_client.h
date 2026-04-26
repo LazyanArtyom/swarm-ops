@@ -24,6 +24,10 @@ class ApiGatewayMissionWorkspaceClient final : public IMissionWorkspaceClient {
                                           const mission::WorkspaceBackground& background) override;
     [[nodiscard]] GatewayResult SaveWorkspaceSnapshot(mission::MissionWorkspace workspace) override;
     [[nodiscard]] GatewayResult DeleteWorkspace(const QString& workspace_id) override;
+    [[nodiscard]] GatewayResult SetWorkspaceShared(const QString& workspace_id,
+                                                   bool shared) override;
+    [[nodiscard]] WorkspaceShareInvite CreateWorkspaceInvite(
+        const QString& workspace_id) override;
     [[nodiscard]] GatewayResult JoinWorkspaceSession(const QString& workspace_id,
                                                      QString user_display_name) override;
     void LeaveWorkspaceSession() override;

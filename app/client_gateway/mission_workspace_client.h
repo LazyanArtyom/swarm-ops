@@ -28,6 +28,10 @@ class IMissionWorkspaceClient : public QObject {
     [[nodiscard]] virtual GatewayResult SaveWorkspaceSnapshot(
         mission::MissionWorkspace workspace) = 0;
     [[nodiscard]] virtual GatewayResult DeleteWorkspace(const QString& workspace_id) = 0;
+    [[nodiscard]] virtual GatewayResult SetWorkspaceShared(const QString& workspace_id,
+                                                           bool shared) = 0;
+    [[nodiscard]] virtual WorkspaceShareInvite CreateWorkspaceInvite(
+        const QString& workspace_id) = 0;
 
     [[nodiscard]] virtual GatewayResult JoinWorkspaceSession(const QString& workspace_id,
                                                              QString user_display_name) = 0;
