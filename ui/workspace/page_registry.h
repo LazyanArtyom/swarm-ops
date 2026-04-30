@@ -20,11 +20,11 @@ enum class PageOpenMode : std::uint8_t {
 };
 
 struct PageDescriptor final {
-    QString page_key;
-    QString title;
-    QIcon icon;
-    QString category;
-    QKeySequence shortcut;
+    QString page_key{};
+    QString title{};
+    QIcon icon{};
+    QString category{};
+    QKeySequence shortcut{};
     PageFactory factory;
     PageOpenMode default_open_mode{PageOpenMode::kSingle};
     bool closable{false};

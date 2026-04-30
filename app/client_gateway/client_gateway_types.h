@@ -111,30 +111,30 @@ enum class MissionSimulationState {
 };
 
 struct SimulatedDronePosition final {
-    QString node_id;
-    QString drone_id;
-    QString from_node_id;
-    QString to_node_id;
-    QPointF position;
+    QString node_id{};
+    QString drone_id{};
+    QString from_node_id{};
+    QString to_node_id{};
+    QPointF position{};
     int edge_pass_index{0};
     bool landed{false};
 };
 
 struct SimulatedDroneTrailSegment final {
-    QString drone_id;
-    QString from_node_id;
-    QString to_node_id;
-    QPointF start_position;
-    QPointF end_position;
+    QString drone_id{};
+    QString from_node_id{};
+    QString to_node_id{};
+    QPointF start_position{};
+    QPointF end_position{};
     int edge_pass_index{0};
 };
 
 struct MissionSimulationFrame final {
-    QString workspace_id;
+    QString workspace_id{};
     MissionSimulationState state{MissionSimulationState::kIdle};
-    QList<SimulatedDronePosition> drones;
-    QList<SimulatedDroneTrailSegment> trail_segments;
-    QString message;
+    QList<SimulatedDronePosition> drones{};
+    QList<SimulatedDroneTrailSegment> trail_segments{};
+    QString message{};
     int frame_index{0};
 };
 

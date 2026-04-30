@@ -22,8 +22,8 @@
       "hidden": true,
       "inherits": "base",
       "cacheVariables": {
-        "QT_ROOT": "$env{HOME}/Qt/6.10.0/gcc_64",
-        "QTIFW_ROOT": "$env{HOME}/Qt/Tools/QtInstallerFramework/4.10"
+        "QT_ROOT": "/opt/Qt/6.8.3/gcc_64",
+        "QTIFW_ROOT": "/opt/Qt/Tools/QtInstallerFramework/4.11"
       }
     },
     {

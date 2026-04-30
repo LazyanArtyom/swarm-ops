@@ -40,11 +40,11 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     };
 
     struct SimulationNode final {
-        QString id;
-        QPointF position;
+        QString id{};
+        QPointF position{};
         mission::GraphNodeType type{mission::GraphNodeType::kGeneric};
         mission::GraphNodeCategory category{mission::GraphNodeCategory::kGeneric};
-        QList<int> neighbours;
+        QList<int> neighbours{};
         int current_neighbour_index{-1};
     };
 
