@@ -105,7 +105,7 @@ void InfoPanel::SetupUi() {
     content_layout_->addWidget(empty_state_, 1);
     scroll_area_->setWidget(content_host_);
 
-    SetEmptyState(tr("No Selection"), tr("Select an item to view details."));
+    SetEmptyState(tr("No Details"), tr("Open a page or select an item to view details."));
 }
 
 void InfoPanel::ShowEmptyState(bool visible) {

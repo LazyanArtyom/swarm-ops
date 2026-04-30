@@ -9,6 +9,7 @@ class QWidget;
 namespace app::controllers {
 class AppCommandController;
 class NavigationController;
+class PageInfoPanelController;
 class WorkspaceController;
 }  // namespace app::controllers
 
@@ -63,6 +64,7 @@ class MainWindow final : public QMainWindow {
     DocumentSession* document_session_{nullptr};
     controllers::WorkspaceController* workspace_controller_{nullptr};
     controllers::NavigationController* navigation_controller_{nullptr};
+    controllers::PageInfoPanelController* page_info_panel_controller_{nullptr};
     controllers::AppCommandController* app_command_controller_{nullptr};
     ShellLayoutManager* shell_layout_manager_{nullptr};
     ui::chrome::MainMenuBar* main_menu_bar_{nullptr};

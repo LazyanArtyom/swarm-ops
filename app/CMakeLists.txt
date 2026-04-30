@@ -23,6 +23,8 @@ add_executable(${APP_TARGET}
     controllers/app_command_controller.cpp
     controllers/navigation_controller.h
     controllers/navigation_controller.cpp
+    controllers/page_info_panel_controller.h
+    controllers/page_info_panel_controller.cpp
     controllers/workspace_controller.h
     controllers/workspace_controller.cpp
     client_gateway/client_gateway.h

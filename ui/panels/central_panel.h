@@ -55,6 +55,7 @@ class CentralPanel final : public QWidget {
 
     [[nodiscard]] bool CanGoBack() const;
     [[nodiscard]] QString CurrentPageKey() const;
+    [[nodiscard]] QWidget* CurrentPage() const;
 
    signals:
     void SigCurrentPageChanged(const QString& page_key);

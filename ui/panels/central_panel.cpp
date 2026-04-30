@@ -153,6 +153,10 @@ QString CentralPanel::CurrentPageKey() const {
     return page_host_ != nullptr ? page_host_->CurrentPageKey() : QString();
 }
 
+QWidget* CentralPanel::CurrentPage() const {
+    return page_host_ != nullptr ? page_host_->CurrentPage() : nullptr;
+}
+
 void CentralPanel::ActivateSingle(const QString& page_key, QWidget* page) {
     if (page_host_ != nullptr) {
         page_host_->ActivateSingle(page_key, page);

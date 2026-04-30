@@ -8,6 +8,7 @@
 #include "app/document_session.h"
 #include "app/controllers/app_command_controller.h"
 #include "app/controllers/navigation_controller.h"
+#include "app/controllers/page_info_panel_controller.h"
 #include "app/controllers/workspace_controller.h"
 #include "app/mission/mission_workspace_service.h"
 #include "app/shell_layout_manager.h"
@@ -42,7 +43,7 @@ void MainWindow::SetupUi() {
             &ShellLayoutManager::Reset);
     RefreshToolBarMetrics();
 
-    if (navigation_controller_ != nullptr && !shell_layout_manager_->HasRestoredPageSession()) {
+    if (navigation_controller_ != nullptr) {
         navigation_controller_->OpenHome();
     }
     SyncDocumentSessionFromWorkspace();
@@ -85,6 +86,10 @@ void MainWindow::CreateControllers() {
     navigation_controller_ = new controllers::NavigationController(
         context_.Services(), widgets.navigation_panel, widgets.central_panel, app_actions_, this);
     navigation_controller_->RefreshNavigationItems();
+
+    page_info_panel_controller_ = new controllers::PageInfoPanelController(
+        widgets.central_panel, widgets.info_panel, this);
+    page_info_panel_controller_->Wire();
 
     const controllers::AppCommandController::Targets command_targets{
         .services = &context_.Services(),

@@ -172,6 +172,64 @@ std::string BoundsLogMessage(const MissionWorkspace& workspace) {
         .toStdString();
 }
 
+bool HasToggleSelectionModifier(Qt::KeyboardModifiers modifiers) {
+    return modifiers.testFlag(Qt::ShiftModifier) || modifiers.testFlag(Qt::ControlModifier) ||
+           modifiers.testFlag(Qt::MetaModifier);
+}
+
+QFrame* CreateInspectorCard(QWidget* parent) {
+    auto* card = new QFrame(parent);
+    card->setFrameShape(QFrame::NoFrame);
+    card->setProperty("uiComponent", QStringLiteral("graph-inspector-card"));
+    return card;
+}
+
+QLabel* CreateInspectorSectionTitle(const QString& text, QWidget* parent) {
+    auto* label = new QLabel(text, parent);
+    label->setProperty("uiComponent", QStringLiteral("graph-inspector-section-title"));
+    label->setWordWrap(true);
+    return label;
+}
+
+QLabel* CreateInspectorHintText(const QString& text, QWidget* parent) {
+    auto* label = new QLabel(text, parent);
+    label->setProperty("uiComponent", QStringLiteral("graph-inspector-hint"));
+    label->setWordWrap(true);
+    return label;
+}
+
+QLabel* CreateInspectorFormLabel(const QString& text, QWidget* parent,
+                                 const ui::theme::ThemeMetricsData& metrics) {
+    auto* label = new QLabel(text, parent);
+    label->setProperty("uiComponent", QStringLiteral("graph-inspector-form-label"));
+    label->setMinimumWidth(metrics.settings_label_width_px);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    return label;
+}
+
+QLabel* CreateInspectorValueLabel(QWidget* parent, bool selectable = false) {
+    auto* label = new QLabel(parent);
+    label->setProperty("uiComponent", QStringLiteral("graph-inspector-value"));
+    label->setWordWrap(true);
+    if (selectable) {
+        label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    }
+    return label;
+}
+
+void ConfigureInspectorForm(QFormLayout* form, const ui::theme::ThemeMetricsData& metrics) {
+    if (form == nullptr) {
+        return;
+    }
+
+    form->setContentsMargins(0, 0, 0, 0);
+    form->setLabelAlignment(Qt::AlignLeft | Qt::AlignTop);
+    form->setFormAlignment(Qt::AlignLeft | Qt::AlignTop);
+    form->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+    form->setHorizontalSpacing(metrics.spacing_md_px);
+    form->setVerticalSpacing(metrics.spacing_sm_px);
+}
+
 const GraphNode* FindNodeById(const MissionWorkspace& workspace, const QString& node_id) {
     const auto it = std::find_if(workspace.nodes.begin(), workspace.nodes.end(),
                                  [&node_id](const GraphNode& node) { return node.id == node_id; });
@@ -648,7 +706,7 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
         }
 
         if (tool_mode_ == GraphEditorToolMode::kSelect &&
-            event->modifiers().testFlag(Qt::ShiftModifier)) {
+            HasToggleSelectionModifier(event->modifiers())) {
             if (GraphNodeItem* node_item = NodeItemAt(event->pos())) {
                 node_item->setSelected(!node_item->isSelected());
                 event->accept();
@@ -662,7 +720,7 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
         }
 
         if (tool_mode_ == GraphEditorToolMode::kSelect &&
-            !event->modifiers().testFlag(Qt::ShiftModifier)) {
+            !HasToggleSelectionModifier(event->modifiers())) {
             if (GraphNodeItem* node_item = NodeItemAt(event->pos())) {
                 if (!node_item->isSelected()) {
                     scene_->clearSelection();
@@ -689,6 +747,18 @@ void GraphEditorView::mousePressEvent(QMouseEvent* event) {
     }
 
     QGraphicsView::mousePressEvent(event);
+}
+
+void GraphEditorView::mouseDoubleClickEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton && tool_mode_ == GraphEditorToolMode::kSelect &&
+        !HasToggleSelectionModifier(event->modifiers()) && NodeItemAt(event->pos()) == nullptr &&
+        EdgeItemAt(event->pos()) == nullptr) {
+        MissionWorkspaceRuntime().AddNode(mapToScene(event->pos()));
+        event->accept();
+        return;
+    }
+
+    QGraphicsView::mouseDoubleClickEvent(event);
 }
 
 void GraphEditorView::mouseMoveEvent(QMouseEvent* event) {
@@ -1003,24 +1073,21 @@ bool GraphEditorView::IsPanGesture(const QMouseEvent* event) const {
     return event != nullptr &&
            (event->button() == Qt::MiddleButton ||
             (event->button() == Qt::LeftButton && tool_mode_ == GraphEditorToolMode::kPan) ||
-            (event->button() == Qt::LeftButton &&
-             (event->modifiers().testFlag(Qt::ControlModifier) ||
-              event->modifiers().testFlag(Qt::MetaModifier))) ||
             (event->button() == Qt::LeftButton && space_pressed_));
 }
 
-GraphInspectorPanel::GraphInspectorPanel(QWidget* parent)
-    : ui::PanelWidget(tr("Inspector"), "graph_inspector_panel", parent) {
+GraphInspectorContent::GraphInspectorContent(QWidget* parent) : QWidget(parent) {
     BuildUi();
     RefreshUi();
 }
 
-void GraphInspectorPanel::SetWorkspace(const MissionWorkspace& workspace) {
+void GraphInspectorContent::SetWorkspace(const MissionWorkspace& workspace) {
     workspace_ = workspace;
     RefreshUi();
 }
 
-void GraphInspectorPanel::SetSelection(const QList<QString>& node_ids, const QList<QString>& edge_ids) {
+void GraphInspectorContent::SetSelection(const QList<QString>& node_ids,
+                                         const QList<QString>& edge_ids) {
     if (selected_node_ids_ == node_ids && selected_edge_ids_ == edge_ids) {
         return;
     }
@@ -1029,15 +1096,19 @@ void GraphInspectorPanel::SetSelection(const QList<QString>& node_ids, const QLi
     RefreshUi();
 }
 
-void GraphInspectorPanel::BuildUi() {
+void GraphInspectorContent::BuildUi() {
     const auto metrics = ui::theme::ThemeMetrics::Instance().Current();
 
-    auto* outer_layout = ContentLayout();
+    setObjectName(QStringLiteral("graph_inspector_content"));
+    setAttribute(Qt::WA_StyledBackground, true);
+    setProperty("uiComponent", QStringLiteral("graph-inspector-root"));
+
+    auto* outer_layout = new QVBoxLayout(this);
     outer_layout->setContentsMargins(metrics.spacing_sm_px, metrics.spacing_sm_px,
                                      metrics.spacing_sm_px, metrics.spacing_sm_px);
     outer_layout->setSpacing(metrics.spacing_sm_px);
 
-    auto* scroll_area = new QScrollArea(ContentWidget());
+    auto* scroll_area = new QScrollArea(this);
     scroll_area->setAttribute(Qt::WA_StyledBackground, true);
     scroll_area->setProperty("uiComponent", QStringLiteral("panel-scroll-area"));
     scroll_area->setWidgetResizable(true);
@@ -1046,7 +1117,7 @@ void GraphInspectorPanel::BuildUi() {
 
     content_host_ = new QWidget(scroll_area);
     content_host_->setAttribute(Qt::WA_StyledBackground, true);
-    content_host_->setProperty("uiComponent", QStringLiteral("panel-content"));
+    content_host_->setProperty("uiComponent", QStringLiteral("graph-inspector-content-host"));
     auto* layout = new QVBoxLayout(content_host_);
     layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
                                metrics.spacing_md_px, metrics.spacing_md_px);
@@ -1062,25 +1133,30 @@ void GraphInspectorPanel::BuildUi() {
     summary_layout->setContentsMargins(0, 0, 0, 0);
     summary_layout->setSpacing(metrics.spacing_md_px);
 
-    auto* summary_intro = new QLabel(tr("Select a node to edit mission graph properties."), summary_page);
-    summary_intro->setWordWrap(true);
-    summary_intro->setProperty("role", QStringLiteral("muted"));
-    summary_layout->addWidget(summary_intro);
+    auto* summary_card = CreateInspectorCard(summary_page);
+    auto* summary_card_layout = new QVBoxLayout(summary_card);
+    summary_card_layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
+                                            metrics.spacing_md_px, metrics.spacing_md_px);
+    summary_card_layout->setSpacing(metrics.spacing_md_px);
+    summary_card_layout->addWidget(
+        CreateInspectorSectionTitle(tr("Workspace Overview"), summary_card));
+    summary_card_layout->addWidget(CreateInspectorHintText(
+        tr("Select a node or edge to edit its properties. Use Ctrl-click or drag to build a multi-selection."),
+        summary_card));
 
     auto* summary_form = new QFormLayout();
-    summary_form->setContentsMargins(0, 0, 0, 0);
-    summary_form->setSpacing(metrics.spacing_sm_px);
-    workspace_name_value_ = new QLabel(summary_page);
-    workspace_name_value_->setWordWrap(true);
-    workspace_bounds_value_ = new QLabel(summary_page);
-    workspace_bounds_value_->setWordWrap(true);
-    workspace_bounds_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    workspace_graph_value_ = new QLabel(summary_page);
-    workspace_graph_value_->setWordWrap(true);
-    summary_form->addRow(tr("Workspace"), workspace_name_value_);
-    summary_form->addRow(tr("Bounds"), workspace_bounds_value_);
-    summary_form->addRow(tr("Graph"), workspace_graph_value_);
-    summary_layout->addLayout(summary_form);
+    ConfigureInspectorForm(summary_form, metrics);
+    workspace_name_value_ = CreateInspectorValueLabel(summary_card);
+    workspace_bounds_value_ = CreateInspectorValueLabel(summary_card, true);
+    workspace_graph_value_ = CreateInspectorValueLabel(summary_card);
+    summary_form->addRow(CreateInspectorFormLabel(tr("Workspace"), summary_card, metrics),
+                         workspace_name_value_);
+    summary_form->addRow(CreateInspectorFormLabel(tr("Bounds"), summary_card, metrics),
+                         workspace_bounds_value_);
+    summary_form->addRow(CreateInspectorFormLabel(tr("Graph"), summary_card, metrics),
+                         workspace_graph_value_);
+    summary_card_layout->addLayout(summary_form);
+    summary_layout->addWidget(summary_card);
     summary_layout->addStretch(1);
     stack_->addWidget(summary_page);
 
@@ -1089,15 +1165,17 @@ void GraphInspectorPanel::BuildUi() {
     node_layout->setContentsMargins(0, 0, 0, 0);
     node_layout->setSpacing(metrics.spacing_md_px);
 
-    auto* node_title = new QLabel(tr("Node"), node_page);
-    node_layout->addWidget(node_title);
+    auto* node_card = CreateInspectorCard(node_page);
+    auto* node_card_layout = new QVBoxLayout(node_card);
+    node_card_layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
+                                         metrics.spacing_md_px, metrics.spacing_md_px);
+    node_card_layout->setSpacing(metrics.spacing_md_px);
+    node_card_layout->addWidget(CreateInspectorSectionTitle(tr("Node Details"), node_card));
 
     auto* node_form = new QFormLayout();
-    node_form->setContentsMargins(0, 0, 0, 0);
-    node_form->setSpacing(metrics.spacing_sm_px);
+    ConfigureInspectorForm(node_form, metrics);
 
-    node_id_value_ = new QLabel(node_page);
-    node_id_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    node_id_value_ = CreateInspectorValueLabel(node_card, true);
 
     node_label_edit_ = new QLineEdit(node_page);
     node_label_edit_->setProperty("settingsRole", QStringLiteral("field"));
@@ -1130,13 +1208,14 @@ void GraphInspectorPanel::BuildUi() {
     node_y_spin_->setDecimals(1);
     node_y_spin_->setSingleStep(1.0);
 
-    node_form->addRow(tr("Node ID"), node_id_value_);
-    node_form->addRow(tr("Label"), node_label_edit_);
-    node_form->addRow(tr("Type"), node_type_combo_);
-    node_form->addRow(tr("Role"), node_role_combo_);
-    node_form->addRow(tr("Position X"), node_x_spin_);
-    node_form->addRow(tr("Position Y"), node_y_spin_);
-    node_layout->addLayout(node_form);
+    node_form->addRow(CreateInspectorFormLabel(tr("Node ID"), node_card, metrics), node_id_value_);
+    node_form->addRow(CreateInspectorFormLabel(tr("Label"), node_card, metrics), node_label_edit_);
+    node_form->addRow(CreateInspectorFormLabel(tr("Type"), node_card, metrics), node_type_combo_);
+    node_form->addRow(CreateInspectorFormLabel(tr("Role"), node_card, metrics), node_role_combo_);
+    node_form->addRow(CreateInspectorFormLabel(tr("Position X"), node_card, metrics), node_x_spin_);
+    node_form->addRow(CreateInspectorFormLabel(tr("Position Y"), node_card, metrics), node_y_spin_);
+    node_card_layout->addLayout(node_form);
+    node_layout->addWidget(node_card);
     node_layout->addStretch(1);
     stack_->addWidget(node_page);
 
@@ -1145,22 +1224,23 @@ void GraphInspectorPanel::BuildUi() {
     edge_layout->setContentsMargins(0, 0, 0, 0);
     edge_layout->setSpacing(metrics.spacing_md_px);
 
-    auto* edge_title = new QLabel(tr("Edge"), edge_page);
-    edge_layout->addWidget(edge_title);
+    auto* edge_card = CreateInspectorCard(edge_page);
+    auto* edge_card_layout = new QVBoxLayout(edge_card);
+    edge_card_layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
+                                         metrics.spacing_md_px, metrics.spacing_md_px);
+    edge_card_layout->setSpacing(metrics.spacing_md_px);
+    edge_card_layout->addWidget(CreateInspectorSectionTitle(tr("Edge Details"), edge_card));
 
     auto* edge_form = new QFormLayout();
-    edge_form->setContentsMargins(0, 0, 0, 0);
-    edge_form->setSpacing(metrics.spacing_sm_px);
-    edge_id_value_ = new QLabel(edge_page);
-    edge_id_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    edge_from_value_ = new QLabel(edge_page);
-    edge_from_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    edge_to_value_ = new QLabel(edge_page);
-    edge_to_value_->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    edge_form->addRow(tr("Edge ID"), edge_id_value_);
-    edge_form->addRow(tr("From"), edge_from_value_);
-    edge_form->addRow(tr("To"), edge_to_value_);
-    edge_layout->addLayout(edge_form);
+    ConfigureInspectorForm(edge_form, metrics);
+    edge_id_value_ = CreateInspectorValueLabel(edge_card, true);
+    edge_from_value_ = CreateInspectorValueLabel(edge_card, true);
+    edge_to_value_ = CreateInspectorValueLabel(edge_card, true);
+    edge_form->addRow(CreateInspectorFormLabel(tr("Edge ID"), edge_card, metrics), edge_id_value_);
+    edge_form->addRow(CreateInspectorFormLabel(tr("From"), edge_card, metrics), edge_from_value_);
+    edge_form->addRow(CreateInspectorFormLabel(tr("To"), edge_card, metrics), edge_to_value_);
+    edge_card_layout->addLayout(edge_form);
+    edge_layout->addWidget(edge_card);
     edge_layout->addStretch(1);
     stack_->addWidget(edge_page);
 
@@ -1169,18 +1249,26 @@ void GraphInspectorPanel::BuildUi() {
     multi_layout->setContentsMargins(0, 0, 0, 0);
     multi_layout->setSpacing(metrics.spacing_md_px);
 
-    auto* multi_title = new QLabel(tr("Selection"), multi_page);
-    multi_layout->addWidget(multi_title);
+    auto* multi_card = CreateInspectorCard(multi_page);
+    auto* multi_card_layout = new QVBoxLayout(multi_card);
+    multi_card_layout->setContentsMargins(metrics.spacing_md_px, metrics.spacing_md_px,
+                                          metrics.spacing_md_px, metrics.spacing_md_px);
+    multi_card_layout->setSpacing(metrics.spacing_md_px);
+    multi_card_layout->addWidget(CreateInspectorSectionTitle(tr("Multi Selection"), multi_card));
+    multi_card_layout->addWidget(CreateInspectorHintText(
+        tr("Delete removes every selected item from the graph."), multi_card));
 
     auto* multi_form = new QFormLayout();
-    multi_form->setContentsMargins(0, 0, 0, 0);
-    multi_form->setSpacing(metrics.spacing_sm_px);
-    selection_count_value_ = new QLabel(multi_page);
-    selection_breakdown_value_ = new QLabel(multi_page);
-    selection_breakdown_value_->setWordWrap(true);
-    multi_form->addRow(tr("Selected"), selection_count_value_);
-    multi_form->addRow(tr("Items"), selection_breakdown_value_);
-    multi_layout->addLayout(multi_form);
+    ConfigureInspectorForm(multi_form, metrics);
+    selection_count_value_ = CreateInspectorValueLabel(multi_card);
+    selection_count_value_->setProperty("uiComponent", QStringLiteral("graph-inspector-badge"));
+    selection_breakdown_value_ = CreateInspectorValueLabel(multi_card);
+    multi_form->addRow(CreateInspectorFormLabel(tr("Selected"), multi_card, metrics),
+                       selection_count_value_);
+    multi_form->addRow(CreateInspectorFormLabel(tr("Items"), multi_card, metrics),
+                       selection_breakdown_value_);
+    multi_card_layout->addLayout(multi_form);
+    multi_layout->addWidget(multi_card);
     multi_layout->addStretch(1);
     stack_->addWidget(multi_page);
 
@@ -1222,7 +1310,7 @@ void GraphInspectorPanel::BuildUi() {
     connect(node_y_spin_, &QDoubleSpinBox::editingFinished, this, emit_position_change);
 }
 
-void GraphInspectorPanel::RefreshUi() {
+void GraphInspectorContent::RefreshUi() {
     RefreshSummary();
     if (stack_ == nullptr) {
         return;
@@ -1242,7 +1330,7 @@ void GraphInspectorPanel::RefreshUi() {
     RefreshMultiSelection();
 }
 
-void GraphInspectorPanel::RefreshSummary() {
+void GraphInspectorContent::RefreshSummary() {
     if (workspace_name_value_ != nullptr) {
         workspace_name_value_->setText(workspace_.name.isEmpty() ? tr("No active workspace")
                                                                  : workspace_.name);
@@ -1257,7 +1345,7 @@ void GraphInspectorPanel::RefreshSummary() {
     }
 }
 
-void GraphInspectorPanel::RefreshNodeDetails() {
+void GraphInspectorContent::RefreshNodeDetails() {
     const GraphNode* node = SelectedNode();
     if (node == nullptr) {
         stack_->setCurrentIndex(0);
@@ -1291,7 +1379,7 @@ void GraphInspectorPanel::RefreshNodeDetails() {
     syncing_ = false;
 }
 
-void GraphInspectorPanel::RefreshEdgeDetails() {
+void GraphInspectorContent::RefreshEdgeDetails() {
     const GraphEdge* edge = SelectedEdge();
     if (edge == nullptr) {
         stack_->setCurrentIndex(0);
@@ -1310,7 +1398,7 @@ void GraphInspectorPanel::RefreshEdgeDetails() {
     }
 }
 
-void GraphInspectorPanel::RefreshMultiSelection() {
+void GraphInspectorContent::RefreshMultiSelection() {
     stack_->setCurrentIndex(3);
     const qsizetype total_count = selected_node_ids_.size() + selected_edge_ids_.size();
     if (selection_count_value_ != nullptr) {
@@ -1324,21 +1412,21 @@ void GraphInspectorPanel::RefreshMultiSelection() {
     }
 }
 
-const GraphNode* GraphInspectorPanel::SelectedNode() const {
+const GraphNode* GraphInspectorContent::SelectedNode() const {
     if (selected_node_ids_.size() != 1) {
         return nullptr;
     }
     return FindNodeById(workspace_, selected_node_ids_.front());
 }
 
-const GraphEdge* GraphInspectorPanel::SelectedEdge() const {
+const GraphEdge* GraphInspectorContent::SelectedEdge() const {
     if (selected_edge_ids_.size() != 1) {
         return nullptr;
     }
     return FindEdgeById(workspace_, selected_edge_ids_.front());
 }
 
-QString GraphInspectorPanel::NodeTypeText(GraphNodeType type) {
+QString GraphInspectorContent::NodeTypeText(GraphNodeType type) {
     switch (type) {
         case GraphNodeType::kGeneric:
             return tr("Generic");
@@ -1350,7 +1438,7 @@ QString GraphInspectorPanel::NodeTypeText(GraphNodeType type) {
     return {};
 }
 
-QString GraphInspectorPanel::NodeCategoryText(GraphNodeCategory category) {
+QString GraphInspectorContent::NodeCategoryText(GraphNodeCategory category) {
     switch (category) {
         case GraphNodeCategory::kGeneric:
             return tr("Generic");
@@ -1418,21 +1506,7 @@ GraphEditorPage::GraphEditorPage(QWidget* parent) : QWidget(parent) {
     layout->addWidget(tool_strip_);
 
     editor_ = new GraphEditorView(this);
-    inspector_ = new GraphInspectorPanel(this);
-    inspector_->setMinimumWidth(metrics.info_min_width_px);
-    inspector_->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-
-    content_splitter_ = new QSplitter(Qt::Horizontal, this);
-    content_splitter_->setChildrenCollapsible(false);
-    content_splitter_->setHandleWidth(1);
-    content_splitter_->setOpaqueResize(true);
-    content_splitter_->addWidget(editor_);
-    content_splitter_->addWidget(inspector_);
-    content_splitter_->setStretchFactor(0, 1);
-    content_splitter_->setStretchFactor(1, 0);
-    content_splitter_->setSizes({std::max(1, width() - metrics.info_width_px),
-                                 metrics.info_width_px});
-    layout->addWidget(content_splitter_, 1);
+    layout->addWidget(editor_, 1);
 
     connect(select_action_, &QAction::triggered, this,
             [this] { editor_->SetToolMode(GraphEditorToolMode::kSelect); });
@@ -1452,22 +1526,6 @@ GraphEditorPage::GraphEditorPage(QWidget* parent) : QWidget(parent) {
     connect(redo_action_, &QAction::triggered, this, [] { MissionWorkspaceRuntime().Redo(); });
 
     connect(editor_, &GraphEditorView::SigSelectionChanged, this, &GraphEditorPage::OnSelectionChanged);
-    connect(inspector_, &GraphInspectorPanel::SigNodeLabelEdited, this,
-            [](const QString& node_id, const QString& label) {
-                MissionWorkspaceRuntime().SetNodeLabel(node_id, label);
-            });
-    connect(inspector_, &GraphInspectorPanel::SigNodeTypeEdited, this,
-            [](const QString& node_id, GraphNodeType type) {
-                MissionWorkspaceRuntime().SetNodeType(node_id, type);
-            });
-    connect(inspector_, &GraphInspectorPanel::SigNodeCategoryEdited, this,
-            [](const QString& node_id, GraphNodeCategory category) {
-                MissionWorkspaceRuntime().SetNodeCategory(node_id, category);
-            });
-    connect(inspector_, &GraphInspectorPanel::SigNodePositionEdited, this,
-            [](const QString& node_id, QPointF position) {
-                MissionWorkspaceRuntime().MoveNode(node_id, position);
-            });
 
     connect(&MissionWorkspaceRuntime(), &MissionWorkspaceService::SigWorkspaceChanged, this,
             &GraphEditorPage::OnWorkspaceChanged);
@@ -1479,10 +1537,38 @@ GraphEditorPage::GraphEditorPage(QWidget* parent) : QWidget(parent) {
     OnWorkspaceChanged(MissionWorkspaceRuntime().ActiveWorkspace());
 }
 
+QWidget* GraphEditorPage::CreateInfoPanelWidget(QWidget* parent) {
+    auto* content = new GraphInspectorContent(parent);
+    info_content_ = content;
+    content->SetWorkspace(workspace_);
+    content->SetSelection(selected_node_ids_, selected_edge_ids_);
+
+    connect(content, &GraphInspectorContent::SigNodeLabelEdited, this,
+            [](const QString& node_id, const QString& label) {
+                MissionWorkspaceRuntime().SetNodeLabel(node_id, label);
+            });
+    connect(content, &GraphInspectorContent::SigNodeTypeEdited, this,
+            [](const QString& node_id, GraphNodeType type) {
+                MissionWorkspaceRuntime().SetNodeType(node_id, type);
+            });
+    connect(content, &GraphInspectorContent::SigNodeCategoryEdited, this,
+            [](const QString& node_id, GraphNodeCategory category) {
+                MissionWorkspaceRuntime().SetNodeCategory(node_id, category);
+            });
+    connect(content, &GraphInspectorContent::SigNodePositionEdited, this,
+            [](const QString& node_id, QPointF position) {
+                MissionWorkspaceRuntime().MoveNode(node_id, position);
+            });
+
+    return content;
+}
+
 void GraphEditorPage::OnSelectionChanged(const QList<QString>& node_ids,
                                          const QList<QString>& edge_ids) {
-    if (inspector_ != nullptr) {
-        inspector_->SetSelection(node_ids, edge_ids);
+    selected_node_ids_ = node_ids;
+    selected_edge_ids_ = edge_ids;
+    if (info_content_ != nullptr) {
+        info_content_->SetSelection(selected_node_ids_, selected_edge_ids_);
     }
     if (delete_action_ != nullptr) {
         delete_action_->setEnabled(!node_ids.isEmpty() || !edge_ids.isEmpty());
@@ -1490,6 +1576,7 @@ void GraphEditorPage::OnSelectionChanged(const QList<QString>& node_ids,
 }
 
 void GraphEditorPage::OnWorkspaceChanged(const MissionWorkspace& workspace) {
+    workspace_ = workspace;
     if (workspace.background.IsValid()) {
         logging::Logger::InfoFor(kMissionLogCategory, BoundsLogMessage(workspace));
     }
@@ -1497,8 +1584,8 @@ void GraphEditorPage::OnWorkspaceChanged(const MissionWorkspace& workspace) {
         editor_->SetWorkspace(workspace);
         editor_->ScheduleFitToWorkspace();
     }
-    if (inspector_ != nullptr) {
-        inspector_->SetWorkspace(workspace);
+    if (info_content_ != nullptr) {
+        info_content_->SetWorkspace(workspace_);
     }
     RefreshToolbarState();
 }

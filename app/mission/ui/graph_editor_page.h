@@ -4,12 +4,13 @@
 #include <QGraphicsView>
 #include <QHash>
 #include <QList>
+#include <QPointer>
 #include <QPoint>
 #include <QPointF>
 #include <QWidget>
 
 #include "app/mission/mission_workspace.h"
-#include "ui/panels/panel_widget.h"
+#include "ui/panels/info_panel_page.h"
 
 class QAction;
 class QActionGroup;
@@ -18,7 +19,6 @@ class QGraphicsLineItem;
 class QDoubleSpinBox;
 class QLabel;
 class QLineEdit;
-class QSplitter;
 class QStackedWidget;
 class QToolBar;
 
@@ -110,6 +110,7 @@ class GraphEditorView final : public QGraphicsView {
     void contextMenuEvent(QContextMenuEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -146,11 +147,11 @@ class GraphEditorView final : public QGraphicsView {
     bool fit_to_workspace_active_{true};
 };
 
-class GraphInspectorPanel final : public ui::PanelWidget {
+class GraphInspectorContent final : public QWidget {
     Q_OBJECT
 
    public:
-    explicit GraphInspectorPanel(QWidget* parent = nullptr);
+    explicit GraphInspectorContent(QWidget* parent = nullptr);
 
     void SetWorkspace(const MissionWorkspace& workspace);
     void SetSelection(const QList<QString>& node_ids, const QList<QString>& edge_ids);
@@ -195,11 +196,13 @@ class GraphInspectorPanel final : public ui::PanelWidget {
     bool syncing_{false};
 };
 
-class GraphEditorPage final : public QWidget {
+class GraphEditorPage final : public QWidget, public ui::IInfoPanelPage {
     Q_OBJECT
+    Q_INTERFACES(app::ui::IInfoPanelPage)
 
    public:
     explicit GraphEditorPage(QWidget* parent = nullptr);
+    [[nodiscard]] QWidget* CreateInfoPanelWidget(QWidget* parent) override;
 
    private:
     void OnSelectionChanged(const QList<QString>& node_ids, const QList<QString>& edge_ids);
@@ -208,9 +211,11 @@ class GraphEditorPage final : public QWidget {
     void RefreshToolbarState();
 
     QToolBar* tool_strip_{nullptr};
-    QSplitter* content_splitter_{nullptr};
     GraphEditorView* editor_{nullptr};
-    GraphInspectorPanel* inspector_{nullptr};
+    MissionWorkspace workspace_;
+    QList<QString> selected_node_ids_;
+    QList<QString> selected_edge_ids_;
+    QPointer<GraphInspectorContent> info_content_;
     QActionGroup* mode_actions_{nullptr};
     QAction* select_action_{nullptr};
     QAction* add_node_action_{nullptr};

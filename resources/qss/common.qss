@@ -141,47 +141,82 @@ QGraphicsView[uiComponent="graph-editor-canvas"] QScrollBar {
   border: 0;
 }
 
-QWidget#graph_inspector_panel,
-QWidget#graph_inspector_panel QWidget[uiComponent="panel-content"],
-QWidget#graph_inspector_panel QWidget[uiComponent="panel-scroll-area"],
-QWidget#graph_inspector_panel QWidget[uiComponent="panel-scroll-area"] > QWidget,
-QWidget#graph_inspector_panel QStackedWidget[uiComponent="graph-inspector-stack"],
-QWidget#graph_inspector_panel QStackedWidget[uiComponent="graph-inspector-stack"] > QWidget,
-QWidget#graph_inspector_panel QLabel {
-  background: ${BG_SURFACE};
+QWidget#graph_inspector_content,
+QWidget#graph_inspector_content QWidget[uiComponent="graph-inspector-root"],
+QWidget#graph_inspector_content QWidget[uiComponent="graph-inspector-content-host"],
+QWidget#graph_inspector_content QWidget[uiComponent="panel-scroll-area"],
+QWidget#graph_inspector_content QWidget[uiComponent="panel-scroll-area"] > QWidget,
+QWidget#graph_inspector_content QStackedWidget[uiComponent="graph-inspector-stack"],
+QWidget#graph_inspector_content QStackedWidget[uiComponent="graph-inspector-stack"] > QWidget {
+  background: transparent;
   border: 0;
 }
 
-QWidget#graph_inspector_panel QLabel[role="muted"] {
+QWidget#graph_inspector_content QFrame[uiComponent="graph-inspector-card"] {
+  background: ${BG_ELEVATED};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_MD}px;
+}
+
+QWidget#graph_inspector_content QLabel {
+  background: transparent;
+  border: 0;
+  color: ${FG};
+}
+
+QWidget#graph_inspector_content QLabel[uiComponent="graph-inspector-section-title"] {
+  color: ${FG};
+  font-weight: 600;
+}
+
+QWidget#graph_inspector_content QLabel[uiComponent="graph-inspector-hint"],
+QWidget#graph_inspector_content QLabel[uiComponent="graph-inspector-form-label"] {
   color: ${FG_MUTED};
 }
 
-QWidget#graph_inspector_panel QLineEdit,
-QWidget#graph_inspector_panel QComboBox,
-QWidget#graph_inspector_panel QDoubleSpinBox {
+QWidget#graph_inspector_content QLabel[uiComponent="graph-inspector-value"] {
+  background: ${BG_SURFACE};
+  border: 1px solid ${BORDER};
+  border-radius: ${RADIUS_SM}px;
+  min-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
+  padding: ${SPACE_XS}px ${SPACE_SM}px;
+}
+
+QWidget#graph_inspector_content QLabel[uiComponent="graph-inspector-badge"] {
+  background: ${PRIMARY_CONTAINER};
+  border: 1px solid ${STATE_SELECTED};
+  border-radius: ${RADIUS_SM}px;
+  color: ${ON_PRIMARY_CONTAINER};
+  font-weight: 600;
+}
+
+QWidget#graph_inspector_content QLineEdit[settingsRole="field"],
+QWidget#graph_inspector_content QComboBox[settingsRole="field"],
+QWidget#graph_inspector_content QDoubleSpinBox[settingsRole="field"] {
   background: ${BG_WINDOW};
   border: 1px solid ${BORDER};
   border-radius: ${RADIUS_SM}px;
   min-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
+  max-height: ${SETTINGS_FIELD_HEIGHT_PX}px;
   padding: 0 ${SPACE_SM}px;
 }
 
-QWidget#graph_inspector_panel QLineEdit:focus,
-QWidget#graph_inspector_panel QComboBox:focus,
-QWidget#graph_inspector_panel QDoubleSpinBox:focus {
+QWidget#graph_inspector_content QLineEdit[settingsRole="field"]:focus,
+QWidget#graph_inspector_content QComboBox[settingsRole="field"]:focus,
+QWidget#graph_inspector_content QDoubleSpinBox[settingsRole="field"]:focus {
   border: 1px solid ${PRIMARY};
 }
 
-QWidget#graph_inspector_panel QComboBox::drop-down,
-QWidget#graph_inspector_panel QDoubleSpinBox::up-button,
-QWidget#graph_inspector_panel QDoubleSpinBox::down-button {
+QWidget#graph_inspector_content QComboBox[settingsRole="field"]::drop-down,
+QWidget#graph_inspector_content QDoubleSpinBox[settingsRole="field"]::up-button,
+QWidget#graph_inspector_content QDoubleSpinBox[settingsRole="field"]::down-button {
   background: transparent;
   border: 0;
   border-left: 1px solid ${BORDER};
   width: 24px;
 }
 
-QWidget#graph_inspector_panel QComboBox::down-arrow {
+QWidget#graph_inspector_content QComboBox[settingsRole="field"]::down-arrow {
   image: none;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
@@ -190,7 +225,7 @@ QWidget#graph_inspector_panel QComboBox::down-arrow {
   width: 0;
 }
 
-QWidget#graph_inspector_panel QComboBox QAbstractItemView {
+QWidget#graph_inspector_content QComboBox[settingsRole="field"] QAbstractItemView {
   background: ${BG_ELEVATED};
   border: 1px solid ${BORDER};
   color: ${FG};
@@ -263,7 +298,8 @@ QLabel[uiComponent="settings-label"] {
 }
 
 QComboBox[settingsRole="field"],
-QLineEdit[settingsRole="field"] {
+QLineEdit[settingsRole="field"],
+QDoubleSpinBox[settingsRole="field"] {
   background: ${BG_WINDOW};
   border: 1px solid ${BORDER};
   border-radius: ${RADIUS_SM}px;
@@ -273,7 +309,8 @@ QLineEdit[settingsRole="field"] {
 }
 
 QComboBox[settingsRole="field"]:focus,
-QLineEdit[settingsRole="field"]:focus {
+QLineEdit[settingsRole="field"]:focus,
+QDoubleSpinBox[settingsRole="field"]:focus {
   border: 1px solid ${PRIMARY};
 }
 
