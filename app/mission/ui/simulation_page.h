@@ -8,7 +8,7 @@
 #include "app/mission/mission_workspace.h"
 
 class QAction;
-class QGraphicsLineItem;
+class QGraphicsPathItem;
 class QGraphicsPixmapItem;
 class QGraphicsScene;
 class QLabel;
@@ -26,6 +26,7 @@ class SimulationView final : public QGraphicsView {
     void SetWorkspace(const MissionWorkspace& workspace);
     void ApplyFrame(const client_gateway::MissionSimulationFrame& frame);
     void FitToWorkspace();
+    void ResetSimulation();
 
    protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -37,25 +38,22 @@ class SimulationView final : public QGraphicsView {
     void RenderWorkspaceDrones();
     void EnsureDroneItem(const client_gateway::SimulatedDronePosition& drone);
     void DrawTrajectorySegment(const client_gateway::SimulatedDroneTrailSegment& segment);
-    void UpdatePrimaryTrajectory(const client_gateway::SimulatedDroneTrailSegment& segment,
-                                 const QString& edge_key, const QLineF& edge_line);
-    void UpdateRepeatedTrajectory(const client_gateway::SimulatedDroneTrailSegment& segment,
-                                  const QString& edge_key, const QLineF& edge_line);
+    void UpdateTrajectory(const client_gateway::SimulatedDroneTrailSegment& segment,
+                          const QString& edge_key, const QLineF& edge_line);
     [[nodiscard]] bool TryEdgeLine(const client_gateway::SimulatedDroneTrailSegment& segment,
                                    QString* edge_key, QLineF* edge_line) const;
-    [[nodiscard]] QColor TrajectorySegmentColor(
-        const client_gateway::SimulatedDroneTrailSegment& segment) const;
-    [[nodiscard]] int SecondaryTrajectoryLane(const QString& edge_key, const QString& drone_id);
+    [[nodiscard]] int TrajectoryLane(const QString& edge_key, const QString& drone_id,
+                                     int edge_pass_index);
 
     QGraphicsScene* scene_{nullptr};
     MissionWorkspace workspace_;
     QGraphicsPixmapItem* background_item_{nullptr};
     QHash<QString, QPointF> node_positions_;
     QHash<QString, QGraphicsPixmapItem*> drone_items_;
-    QHash<QString, QGraphicsLineItem*> primary_trajectory_items_;
-    QHash<QString, QGraphicsLineItem*> secondary_trajectory_items_;
-    QHash<QString, int> secondary_trajectory_lanes_;
-    QHash<QString, int> next_secondary_lane_by_edge_;
+    QHash<QString, QGraphicsPathItem*> trajectory_outline_items_;
+    QHash<QString, QGraphicsPathItem*> trajectory_items_;
+    QHash<QString, int> trajectory_lanes_;
+    QHash<QString, int> next_trajectory_lane_by_edge_;
     bool fit_to_workspace_active_{true};
 };
 

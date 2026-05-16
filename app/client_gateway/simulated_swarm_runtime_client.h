@@ -53,6 +53,8 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     [[nodiscard]] GatewayResult PrepareMissionSimulation(const mission::MissionWorkspace& workspace);
     void EmitSimulationFrame(QString message = {});
     [[nodiscard]] bool MissionSimulationCompleted() const;
+    void ResetMissionSimulationDronesToStart();
+    [[nodiscard]] bool ClearGraphCycles(int start_node_index, qsizetype neighbours_count);
     [[nodiscard]] bool IsDroneAllowedToFinish(int drone_index);
     [[nodiscard]] int CurrentNeighbourIndex(int node_index) const;
     [[nodiscard]] QString EdgeKey(int from_index, int to_index) const;

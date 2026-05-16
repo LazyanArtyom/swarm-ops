@@ -176,6 +176,7 @@ void SimulatedSwarmRuntimeClient::StopMissionSimulation() {
 
     simulation_timer_.stop();
     simulation_state_ = MissionSimulationState::kIdle;
+    ResetMissionSimulationDronesToStart();
     EmitSimulationFrame(tr("Mission simulation stopped."));
     run_mode_ = RunMode::kNone;
 }
@@ -353,19 +354,26 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
                   });
     }
 
-    int start_node_index = -1;
+    int border_start_node_index = -1;
+    int corner_start_node_index = -1;
     qsizetype neighbours_count = 0;
     for (int index = 0; index < simulation_nodes_.size(); ++index) {
         neighbours_count += simulation_nodes_[index].neighbours.size();
         if (simulation_nodes_[index].category == mission::GraphNodeCategory::kDrone) {
             drone_start_nodes_.push_back(index);
         }
-        if (start_node_index < 0 &&
-            (simulation_nodes_[index].type == mission::GraphNodeType::kBorder ||
-             simulation_nodes_[index].type == mission::GraphNodeType::kCorner)) {
-            start_node_index = index;
+        if (border_start_node_index < 0 &&
+            simulation_nodes_[index].type == mission::GraphNodeType::kBorder) {
+            border_start_node_index = index;
+        }
+        if (corner_start_node_index < 0 &&
+            simulation_nodes_[index].type == mission::GraphNodeType::kCorner) {
+            corner_start_node_index = index;
         }
     }
+
+    const int start_node_index =
+        border_start_node_index >= 0 ? border_start_node_index : corner_start_node_index;
 
     if (simulation_nodes_.isEmpty() || drone_start_nodes_.isEmpty()) {
         return GatewayResult::Failure(tr("Set at least one graph node as a drone."));
@@ -427,23 +435,9 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
         }
     }
 
-    int current_index = start_node_index;
-    const int start_direction = simulation_nodes_[start_node_index].current_neighbour_index;
-    QSet<QPair<int, int>> unique_steps;
-    guard = 0;
-    while (guard++ < std::max<qsizetype>(1, neighbours_count * kSimulationGraphGuardMultiplier)) {
-        IncrementCurrentNeighbour(current_index);
-        const int next_index = CurrentNeighbourIndex(current_index);
-        if (next_index < 0) {
-            break;
-        }
-        unique_steps.insert(qMakePair(current_index, next_index));
-        current_index = next_index;
-        if (current_index == start_node_index &&
-            simulation_nodes_[current_index].current_neighbour_index == start_direction &&
-            unique_steps.size() >= neighbours_count) {
-            break;
-        }
+    if (!ClearGraphCycles(start_node_index, neighbours_count)) {
+        return GatewayResult::Failure(
+            tr("The mission graph rotor state could not be normalized for simulation."));
     }
 
     for (int drone_node_index : drone_start_nodes_) {
@@ -507,6 +501,69 @@ void SimulatedSwarmRuntimeClient::EmitSimulationFrame(QString message) {
 bool SimulatedSwarmRuntimeClient::MissionSimulationCompleted() const {
     return std::all_of(drone_landed_at_start_.begin(), drone_landed_at_start_.end(),
                        [](bool landed) { return landed; });
+}
+
+void SimulatedSwarmRuntimeClient::ResetMissionSimulationDronesToStart() {
+    pending_trail_segments_.clear();
+    for (qsizetype i = 0; i < drone_positions_.size(); ++i) {
+        const int start_index = drone_start_nodes_.value(i, -1);
+        if (start_index < 0 || start_index >= simulation_nodes_.size()) {
+            continue;
+        }
+
+        drone_positions_[i] = simulation_nodes_[start_index].position;
+        if (i < drone_current_nodes_.size()) {
+            drone_current_nodes_[i] = start_index;
+        }
+        if (i < drone_possible_nodes_.size()) {
+            drone_possible_nodes_[i] = -1;
+        }
+        if (i < drone_edge_pass_counts_.size()) {
+            drone_edge_pass_counts_[i] = 0;
+        }
+        if (i < drone_landed_at_start_.size()) {
+            drone_landed_at_start_[i] = false;
+        }
+        if (i < drone_landed_.size()) {
+            drone_landed_[i] = false;
+        }
+    }
+}
+
+bool SimulatedSwarmRuntimeClient::ClearGraphCycles(int start_node_index,
+                                                   qsizetype neighbours_count) {
+    if (start_node_index < 0 || start_node_index >= simulation_nodes_.size() ||
+        neighbours_count <= 0) {
+        return false;
+    }
+
+    const int start_direction = simulation_nodes_[start_node_index].current_neighbour_index;
+    if (start_direction < 0) {
+        return false;
+    }
+
+    int current_index = start_node_index;
+    QSet<QPair<int, int>> unique_steps;
+    const qsizetype guard_limit =
+        std::max<qsizetype>(1, neighbours_count * kSimulationGraphGuardMultiplier);
+    qsizetype guard = 0;
+    while (guard++ < guard_limit) {
+        IncrementCurrentNeighbour(current_index);
+        const int next_index = CurrentNeighbourIndex(current_index);
+        if (next_index < 0) {
+            return false;
+        }
+
+        unique_steps.insert(qMakePair(current_index, next_index));
+        current_index = next_index;
+        if (current_index == start_node_index &&
+            simulation_nodes_[current_index].current_neighbour_index == start_direction &&
+            unique_steps.size() >= neighbours_count) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool SimulatedSwarmRuntimeClient::IsDroneAllowedToFinish(int drone_index) {
