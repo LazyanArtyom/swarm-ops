@@ -7,9 +7,12 @@
 #include <cmath>
 #include <utility>
 
+#include "logging/logger.h"
+
 namespace app::client_gateway {
 namespace {
 
+constexpr auto kMissionLogCategory = "mission";
 constexpr int kTelemetryTickMs = 500;
 constexpr double kBaseLatitudeDeg = 40.1792;
 constexpr double kBaseLongitudeDeg = 44.4991;
@@ -176,6 +179,7 @@ void SimulatedSwarmRuntimeClient::StopMissionSimulation() {
 
     simulation_timer_.stop();
     simulation_state_ = MissionSimulationState::kIdle;
+    LogDroneStepSummary(QStringLiteral("stopped"));
     ResetMissionSimulationDronesToStart();
     EmitSimulationFrame(tr("Mission simulation stopped."));
     run_mode_ = RunMode::kNone;
@@ -262,10 +266,13 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
             const double current_distance =
                 DistanceBetween(drone_positions_[drone_index], possible_position);
             if (distance_remaining >= current_distance) {
+                const int from_index = drone_current_nodes_.value(drone_index, -1);
+                const int to_index = possible_index;
                 const QPointF segment_start = drone_positions_[drone_index];
                 distance_remaining -= current_distance;
                 drone_positions_[drone_index] = possible_position;
                 AppendTrailSegment(static_cast<int>(drone_index), segment_start, possible_position);
+                LogDroneStep(static_cast<int>(drone_index), from_index, to_index);
                 if (IsDroneAllowedToFinish(static_cast<int>(drone_index))) {
                     drone_landed_[drone_index] = true;
                     break;
@@ -288,6 +295,7 @@ void SimulatedSwarmRuntimeClient::TickMissionSimulation() {
     if (MissionSimulationCompleted()) {
         simulation_state_ = MissionSimulationState::kCompleted;
         simulation_timer_.stop();
+        LogDroneStepSummary(QStringLiteral("completed"));
         EmitSimulationFrame(run_mode_ == RunMode::kLiveMission ? tr("Live mission completed.")
                                                                 : tr("Mission simulation completed."));
         run_mode_ = RunMode::kNone;
@@ -312,6 +320,7 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
     drone_current_nodes_.clear();
     drone_possible_nodes_.clear();
     drone_edge_pass_counts_.clear();
+    drone_step_counts_.clear();
     drone_start_directions_.clear();
     drone_landed_at_start_.clear();
     drone_landed_.clear();
@@ -451,6 +460,7 @@ GatewayResult SimulatedSwarmRuntimeClient::PrepareMissionSimulation(
         }
         drone_possible_nodes_.push_back(possible_node_index);
         drone_edge_pass_counts_.push_back(0);
+        drone_step_counts_.push_back(0);
         drone_landed_at_start_.push_back(false);
         drone_landed_.push_back(false);
         drone_positions_.push_back(simulation_nodes_[drone_node_index].position);
@@ -520,6 +530,9 @@ void SimulatedSwarmRuntimeClient::ResetMissionSimulationDronesToStart() {
         }
         if (i < drone_edge_pass_counts_.size()) {
             drone_edge_pass_counts_[i] = 0;
+        }
+        if (i < drone_step_counts_.size()) {
+            drone_step_counts_[i] = 0;
         }
         if (i < drone_landed_at_start_.size()) {
             drone_landed_at_start_[i] = false;
@@ -625,6 +638,35 @@ void SimulatedSwarmRuntimeClient::BeginDroneEdge(int drone_index) {
     int pass_count = edge_visit_counts_.value(drone_edge_key, 0) + 1;
     edge_visit_counts_.insert(drone_edge_key, pass_count);
     drone_edge_pass_counts_[drone_index] = pass_count;
+}
+
+void SimulatedSwarmRuntimeClient::LogDroneStep(int drone_index, int from_index, int to_index) {
+    if (run_mode_ != RunMode::kSimulation || drone_index < 0 ||
+        drone_index >= drone_step_counts_.size() || from_index < 0 || to_index < 0 ||
+        from_index >= simulation_nodes_.size() || to_index >= simulation_nodes_.size()) {
+        return;
+    }
+
+    ++drone_step_counts_[drone_index];
+    logging::Logger::InfoFmtFor(
+        kMissionLogCategory,
+        "simulation step drone={} step={} from_node={} to_node={} edge_pass={} frame={}",
+        SimulatedDroneId(drone_index).toStdString(), drone_step_counts_[drone_index],
+        simulation_nodes_[from_index].id.toStdString(), simulation_nodes_[to_index].id.toStdString(),
+        drone_edge_pass_counts_.value(drone_index), simulation_frame_index_);
+}
+
+void SimulatedSwarmRuntimeClient::LogDroneStepSummary(QStringView reason) const {
+    if (run_mode_ != RunMode::kSimulation || drone_step_counts_.isEmpty()) {
+        return;
+    }
+
+    for (qsizetype i = 0; i < drone_step_counts_.size(); ++i) {
+        logging::Logger::InfoFmtFor(
+            kMissionLogCategory, "simulation {} drone={} total_steps={}",
+            reason.toString().toStdString(), SimulatedDroneId(static_cast<int>(i)).toStdString(),
+            drone_step_counts_[i]);
+    }
 }
 
 void SimulatedSwarmRuntimeClient::AppendTrailSegment(int drone_index, QPointF start_position,

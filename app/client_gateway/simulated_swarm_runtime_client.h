@@ -60,6 +60,8 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     [[nodiscard]] QString EdgeKey(int from_index, int to_index) const;
     void IncrementCurrentNeighbour(int node_index);
     void BeginDroneEdge(int drone_index);
+    void LogDroneStep(int drone_index, int from_index, int to_index);
+    void LogDroneStepSummary(QStringView reason) const;
     void AppendTrailSegment(int drone_index, QPointF start_position, QPointF end_position);
     [[nodiscard]] SwarmStateSnapshot MakeSnapshot(double elapsed_seconds) const;
 
@@ -76,6 +78,7 @@ class SimulatedSwarmRuntimeClient final : public ISwarmRuntimeClient {
     QList<int> drone_current_nodes_;
     QList<int> drone_possible_nodes_;
     QList<int> drone_edge_pass_counts_;
+    QList<int> drone_step_counts_;
     QList<int> drone_start_directions_;
     QList<bool> drone_landed_at_start_;
     QList<bool> drone_landed_;
